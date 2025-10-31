@@ -19,7 +19,7 @@
 ## Dependencies
 - **Hard**: `gh` (GitHub CLI) configured for all relevant hosts.
 - **Runtime**: bash/zsh, Python 3.11+, `jq` (for JSON shaping), standard Unix tools (`sed`, `awk`, `xargs`).
-- **Optional**: `fzf` for interactive pickers; `delta` for diffs.
+- **Optional**: `fzf` for interactive pickers; 
 
 ## Context model
 - **Repo context (default):** running inside a Git working copy.
