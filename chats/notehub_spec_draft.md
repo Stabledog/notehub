@@ -38,22 +38,28 @@ Search order: env vars -> `./.notehub.yml`
 
 ```yaml
 # Example ~/.notehub.yml
-default_host: ghe.example.com
-views:
-  - name: "Today"
-    query: "is:issue is:open assignee:@me sort:updated-desc"
-  - name: "My Notes"
-    query: "is:issue is:open author:@me label:notes sort:updated-desc"
-label_aliases:
-  todo: ["todo","to-do","next"]
-assignee_map:
-  lmatheson4: lmatheson4   # identity mapping across orgs/hosts
+# 
+repos:
+    ghe:
+        default_host: bbgithub.dev.bloomberg.com
+        default_org: notehub-lmatheson4
+        default_repo: notehub.default
+    shellkit:
+        default_host: bbgithub.dev.bloomberg.com
+        default_org: bb-shellkit
+        default_repo: notehub.default
+    pub:
+        default_host: github.com
+        default_org: Stabledog
+        default_repo: notehub.default
+
+
 ```
 
 Env vars:
 - `NOTEHUB_HOST` (overrides default_host)
-- `NOTEHUB_EDITOR` (overrides default_editor)
-- `NOTEHUB_FZF` (`1` enables interactive pickers)
+- `NOTEHUB_ORG` (overrides default_org)
+- `NOTEHUB_REPO` (overrides default_repo)
 
 ---
 
@@ -74,13 +80,13 @@ notehub <command> [flags] [args]
   Create an issue in the current repo (repo context) or in a chosen repo (global).  
   Opens `$EDITOR` for body if `--body` is not provided.
 
+
 ### 3) List, search, filter
 - `notehub list [QUERY|VIEW] [--host HOST] [--json|--table]`  
   Run a saved view (`Today`, `My Notes`, etc.) or an ad‑hoc GitHub search query.
 
 ### 4) Edit/update
 - `notehub edit <ISSUE>` — open in `$EDITOR` for full-body edit.  
-- `notehub label <ISSUE> +L1 -L2` — add/remove labels.  
 - `notehub close <ISSUE>` — close issue.  
 - `notehub reopen <ISSUE>` — reopen.  
 - `notehub comment <ISSUE> [--body FILE|'-']` — add comment.
