@@ -8,13 +8,11 @@
 ## Goals
 - Treat GitHub issues as personal and team **notes/tasks** with minimal friction.
 - Work **anywhere**: single repo context or global multi-org view.
-- Be **safe** and **composable**: primarily orchestrate `gh` subcommands and `gh api`.
-- Zero bespoke auth: **delegate entirely to `gh`** sessions for `github.com` and GHES.
+- Delegate authentication to `gh`
 
 ## Non-goals
 - GUI. (TUI later is optional.)
 - Replacing `gh` – notehub is a higher-level workflow layer.
-- Long-running daemons; everything is on-demand.
 
 ## Dependencies
 - **Hard**: `gh` (GitHub CLI) configured for all relevant hosts.
@@ -27,7 +25,6 @@
   - Discover interesting remotes via `git remote -v` → host(s) → owner/repo.
   - Operations default to *the primary detected repo*.
 - **Global context:** when outside a repo **or** `-g/--global` is set.
-  - Scope expands to **all accessible** repos across all authenticated hosts.
   - Commands may require `--host`, `--org`, or `--repo` selectors.
 
 ### Host discovery
@@ -37,12 +34,11 @@
 ---
 
 ## Configuration
-Search order: `./.notehub.yml` → `~/.config/notehub/config.yml` → env vars.
+Search order: env vars -> `./.notehub.yml`
 
 ```yaml
-# Example ~/.config/notehub/config.yml
+# Example ~/.notehub.yml
 default_host: ghe.example.com
-default_editor: $EDITOR
 views:
   - name: "Today"
     query: "is:issue is:open assignee:@me sort:updated-desc"
