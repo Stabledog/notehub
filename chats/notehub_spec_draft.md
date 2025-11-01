@@ -1,140 +1,88 @@
-# notehub — CLI-first GitHub/GHES note & issue manager (Draft 0.1)
+# notehub — CLI-first GitHub/GHES note & issue manager (Draft 0.2)
 
-> A thin, opinionated wrapper over `gh` for fast note-taking and issue workflow across GitHub **and** GitHub Enterprise.  
-> Shell + Python 3.11+. Respects `$EDITOR` (including `code`). Context-aware (repo vs global).
+A thin, opinionated wrapper over `gh` for fast note-taking using Github issues for backing store.  Shell + Python 3.11+. Context-aware (repo vs global).  
 
 ---
 
 ## Goals
 - Treat GitHub issues as personal and team **notes/tasks** with minimal friction.
-- Work **anywhere**: single repo context or global multi-org view.
-- Delegate authentication to `gh`
-
-## Non-goals
-- GUI. (TUI later is optional.)
-- Replacing `gh` – notehub is a higher-level workflow layer.
+- Delegate Github operations + authentication to `gh`
+- Auto-detect host/org/repo
 
 ## Dependencies
 - **Hard**: `gh` (GitHub CLI) configured for all relevant hosts.
-- **Runtime**: bash/zsh, Python 3.11+, `jq` (for JSON shaping), standard Unix tools (`sed`, `awk`, `xargs`).
+- **Runtime**: bash/zsh, Python 3.11+, standard Unix tools (`sed`, `awk`, `xargs`).
 - **Optional**: `fzf` for interactive pickers; 
 
-## Context model
-- **Repo context (default):** running inside a Git working copy.
-  - Detect via `git rev-parse --show-toplevel`.
-  - Discover interesting remotes via `git remote -v` → host(s) → owner/repo.
-  - Operations default to *the primary detected repo*.
-- **Global context:** when outside a repo **or** `-g/--global` is set.
-  - Commands may require `--host`, `--org`, or `--repo` selectors.
+## Glossary
 
-### Host discovery
-- Enumerate authenticated hosts via `gh auth status --show-token=false`.
-- Each command may accept `--host <hostname>` to pin to `github.com` or a GHES like `ghe.example.com`.
+- "note-issue":  
+    - we're using github issues as notes, but this term removes ambiguity: "an issue which is being treated as a note"
+    - implies that there may be only a subset of issues which are "note-issues" (filter criteria TBD)
+- "store-context": host+org+repo -- resolved on startup as described in config
+- "note-ident": one of (issue number | top match for title regex)
+- "note-header": formatted one-line info about a note -- [issue#] [title]
+
+## Context resolution
+- Store context resolved as follows:
+    - Repo: 
+        - --repo|-r [name] is top choice
+        - git config (local working copy) 'notehub.repo' , skip if -g|--global
+        - Env 'NotehubRepo' 
+        - git config (global) 'notehub.repo' 
+        - 'notehub.default' (literal repo name) is 4th
+    - Org:
+        - --org|-o is top choice
+        - auto-detect from local working copy unless -g|--global
+        - Env 'NotehubOrg' 
+        - git config (global) 'notehub.org' 
+        - 'github.com' 
+    - Host:
+        - --host|-h is top choice
+        - auto-detect from local working copy unless -g|--global
+        - git config (global) 'notehub.host'
+        - 'github.com'
 
 ---
 
 ## Configuration
-Search order: env vars -> `./.notehub.yml`
 
-```yaml
-# Example ~/.notehub.yml
-# 
-repos:
-    ghe:
-        default_host: bbgithub.dev.bloomberg.com
-        default_org: notehub-lmatheson4
-        default_repo: notehub.default
-    shellkit:
-        default_host: bbgithub.dev.bloomberg.com
-        default_org: bb-shellkit
-        default_repo: notehub.default
-    pub:
-        default_host: github.com
-        default_org: Stabledog
-        default_repo: notehub.default
+- User configures host,repo,org manually using `git config` command,
+    e.g:
+    `git config notehub.host my.enterprise.github.com`
+    `git config --global notehub.org notehub.weasel`
+- Editor:  respects $EDITOR environ, defaults to vi
 
+
+## Command structure
 
 ```
-
-Env vars:
-- `NOTEHUB_HOST` (overrides default_host)
-- `NOTEHUB_ORG` (overrides default_org)
-- `NOTEHUB_REPO` (overrides default_repo)
-
----
-
-## High-level commands (proposed)
-
-```
-notehub <command> [flags] [args]
+notehub <command> [<subcommand>] [flags] [args]
 ```
 
-### 1) Bootstrap & context
+### 1) Setup, context, status
 - `notehub status`  
-  Show detected context (repo path, host, owner/repo, user identity), and `gh` auth state.
-- `notehub whoami [--host HOST]`  
-  Print current identity per host via `gh api user`.
+  - Show detected context (repo path, host, owner/repo, user identity), and `gh` auth state.
+  - Show login identity on host
 
 ### 2) Quick capture & edit
-- `notehub new [TITLE] [--label L...] [--assignee U...] [--milestone M] [--body FILE|'-'] [--repo OWNER/REPO] [--host HOST]`  
-  Create an issue in the current repo (repo context) or in a chosen repo (global).  
-  Opens `$EDITOR` for body if `--body` is not provided.
-
+- `notehub add`
+    - Generate note-issue from template, load in editor
 
 ### 3) List, search, filter
-- `notehub list [QUERY|VIEW] [--host HOST] [--json|--table]`  
-  Run a saved view (`Today`, `My Notes`, etc.) or an ad‑hoc GitHub search query.
+- `notehub list`
+    - Show titles of note-issues
+- `notehub find "[full-regex]"`
+    - Search note-issues full body, list each match
 
 ### 4) Edit/update
-- `notehub edit <ISSUE>` — open in `$EDITOR` for full-body edit.  
-- `notehub close <ISSUE>` — close issue.  
-- `notehub reopen <ISSUE>` — reopen.  
-- `notehub comment <ISSUE> [--body FILE|'-']` — add comment.
+- `notehub edit <note-ident>`
+    — open in `$EDITOR` for full-body edit.  
+- `notehub show <ISSUE|title-regex>`
+    - Show note-titles of note-issues
+    - Print URL of issue on 2nd line, indented
 
 ### 5) Cross-repo or cross-org moves
-- `notehub move <ISSUE> <TARGET-REPO>`  
-  Use the “extract and rebuild” flow via `gh api` (reusing your `gh` auth).
+- `notehub move <issue-ident> <TARGET-REPO>`  
+    - Use the “extract and rebuild” flow via `gh api` 
 
-### 6) Views and dashboards
-- `notehub view [NAME] [--json|--table]`  
-  Lists issues using configured saved searches.
-
-### 7) Sync/backup
-- `notehub export [--host HOST] [--org ORG] [--out FILE]`  
-  Dump issues/notes as structured JSON or Markdown for offline use.
-
-### 8) Utilities
-- `notehub browse <ISSUE>` — open in browser.
-- `notehub open` — open current repo’s issues page.
-- `notehub config edit` — open config in `$EDITOR`.
-
----
-
-## Example flows
-
-### Capture a quick note while coding
-```bash
-notehub new "Investigate flaky tests" -l todo
-```
-
-### Review all notes across both hosts
-```bash
-notehub list -g "label:notes is:open author:@me"
-```
-
-### Move an issue between orgs
-```bash
-notehub move myorg/app#42 otherorg/app
-```
-
-### Global dashboard
-```bash
-notehub view Today
-```
-
----
-
-## Future ideas
-- Optional TUI (`notehub dash`) using `fzf`/`textual`.
-- Bi-directional link between local markdown files and issues.
-- Pluggable “storage providers” (e.g., GitLab, Gitea) behind a unified interface.
