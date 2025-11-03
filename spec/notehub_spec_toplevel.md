@@ -1,4 +1,4 @@
-# notehub — CLI-first GitHub/GHES note & issue manager (Draft 0.2)
+# notehub — CLI-first GitHub/GHES note & issue manager (Draft 0.3)
 
 A thin, opinionated wrapper over `gh` for fast note-taking using Github issues for backing store.  Shell + Python 3.11+. Context-aware (repo vs global).  
 
@@ -94,4 +94,39 @@ notehub <command> [<subcommand>] [flags] [args]
 - Failure to invoke of `gh` fails with `gh not found` 
 - `gh` stderr ouput is passed through to parent stderr
 
+
+# File tree layout
+
+## /
+- `pyproject.toml` - Modern Python package metadata (PEP 517/518)
+- `requirements.txt` - Python dependencies
+
+## /src/notehub
+Main application source code.
+- `__main__.py` - Entry point for `python -m notehub`
+- `cli.py` - Command-line argument parsing and dispatch
+- `context.py` - Store-context resolution (host/org/repo detection)
+- `config.py` - Configuration management (git config integration)
+- `gh_wrapper.py` - Wrapper functions for `gh` CLI invocations
+
+## /src/notehub/commands
+Command implementations (one file per command).
+- `status.py` - Context and auth status display
+- `add.py` - Create new note-issues
+- `show.py` - Display note-header and URLs
+- `list.py` - List all note-issues
+- `find.py` - Search note-issue bodies with regex
+- `edit.py` - Edit note-issues in $EDITOR
+- `move.py` - Cross-repo/org note transfers
+
+Test suite.
+- `/tests/unit` - Unit tests for individual modules
+- `/tests/integration` - Integration tests with `gh` CLI
+
+## /scripts
+- `install.sh` - Installation script
+
+## /spec
+- `notehub_spec_toplevel.md` - This specification document
+- `filetree.txt` - Directory structure reference
 
