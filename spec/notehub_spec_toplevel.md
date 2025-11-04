@@ -38,6 +38,7 @@ A thin, opinionated wrapper over `gh` for fast note-taking using Github issues f
         - Env 'NotehubOrg' 
         - git config (global) 'notehub.org' 
         - notehub.$USER ($USER being the user's shell environment value)
+
     - Host:
         - --host|-h is top choice
         - auto-detect from local working copy unless -g|--global
