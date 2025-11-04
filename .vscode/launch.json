@@ -1,0 +1,23 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+    
+        {
+            "name": "notehub 1",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "notehub",
+            "args": [
+                "add"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "GH_TOKEN":"${env:GH_ENTERPRISE_TOKEN}",
+                "GH_HOST":"${env:GH_HOST_ENTERPRISE}"
+            }
+        }
+    ]
+}
