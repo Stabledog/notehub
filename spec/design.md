@@ -73,28 +73,34 @@ def get_editor() -> str:
 
 ```python
 # Public API
+class GhError(Exception):
+    """gh CLI invocation failed."""
+    def __init__(self, returncode: int, stderr: str):
+        self.returncode = returncode
+        self.stderr = stderr
+
 class GhResult:
     returncode: int
     stdout: str
     stderr: str
 
-def create_issue(context: StoreContext, interactive: bool = True) -> GhResult:
+def create_issue(host: str, org: str, repo: str, interactive: bool = True) -> GhResult:
     """Invoke gh issue create."""
     pass
 
-def get_issue(context: StoreContext, issue_number: int) -> dict:
+def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
     """Fetch issue JSON via gh api."""
     pass
 
-def update_issue(context: StoreContext, issue_number: int, body: str) -> GhResult:
+def update_issue(host: str, org: str, repo: str, issue_number: int, body: str) -> GhResult:
     """Update issue body via gh issue edit."""
     pass
 
-def list_issues(context: StoreContext, filters: dict = None) -> list[dict]:
+def list_issues(host: str, org: str, repo: str, filters: dict = None) -> list[dict]:
     """List issues via gh issue list --json."""
     pass
 
-def search_issues(context: StoreContext, query: str) -> list[dict]:
+def search_issues(host: str, org: str, repo: str, query: str) -> list[dict]:
     """Search issues via gh search issues."""
     pass
 ```
@@ -188,11 +194,11 @@ def run(args: Namespace) -> int:
     """Execute move command. Returns exit code."""
     pass
 
-def extract_issue_data(context: StoreContext, issue_number: int) -> dict:
+def extract_issue_data(host: str, org: str, repo: str, issue_number: int) -> dict:
     """Extract full issue data for recreation."""
     pass
 
-def recreate_issue(target_context: StoreContext, data: dict) -> int:
+def recreate_issue(host: str, org: str, repo: str, data: dict) -> int:
     """Recreate issue in target repo. Returns new issue number."""
     pass
 ```
@@ -450,15 +456,17 @@ gh_issue_edit(num, body=modified)
 
 #### Repository Specification
 ```python
-def build_repo_arg(context: StoreContext) -> str:
+def build_repo_arg(host: str, org: str, repo: str) -> str:
     """Build --repo argument value."""
-    if context.host == "github.com":
-        return f"{context.org}/{context.repo}"
+    if host == "github.com":
+        return f"{org}/{repo}"
     else:
-        return f"{context.host}:{context.org}/{context.repo}"
+        return f"{host}:{org}/{repo}"
 
-# Usage:
-["gh", "issue", "list", "--repo", build_repo_arg(context)]
+# Usage (from command layer):
+context = StoreContext.resolve(args)
+repo_arg = build_repo_arg(context.host, context.org, context.repo)
+["gh", "issue", "list", "--repo", repo_arg]
 ```
 
 #### Common Patterns
@@ -467,14 +475,16 @@ def build_repo_arg(context: StoreContext) -> str:
 def build_gh_command(
     operation: str,          # "issue", "api", "search"
     subcommand: str,         # "create", "list", "repos/..."
-    context: StoreContext,
+    host: str,
+    org: str,
+    repo: str,
     extra_args: list[str] = None
 ) -> list[str]:
-    """Build gh command with context."""
+    """Build gh command with repo context."""
     cmd = ["gh", operation, subcommand]
     
     if operation in ["issue", "pr"]:
-        cmd.extend(["--repo", build_repo_arg(context)])
+        cmd.extend(["--repo", build_repo_arg(host, org, repo)])
     
     if extra_args:
         cmd.extend(extra_args)
@@ -587,4 +597,29 @@ graph TD
 ### 5.4 Future Extension Points
 - **Configuration**: Extend `config.py` for per-repo settings
 - **Filtering**: Add issue filtering logic in v2 (labels, milestones)
+
+### 5.5 Layering and Dependencies
+
+**Three-tier architecture:**
+
+1. **Infrastructure Layer** (`gh_wrapper.py`, `config.py`)
+   - No dependencies on domain models
+   - Works with primitive types (strings, ints, dicts)
+   - Reusable across different contexts
+
+2. **Domain Layer** (`context.py`)
+   - Encapsulates business logic (context resolution)
+   - Uses infrastructure layer for git config
+   - No knowledge of commands
+
+3. **Application Layer** (`commands/*.py`, `cli.py`)
+   - Orchestrates domain and infrastructure
+   - Extracts primitives from domain objects before calling infrastructure
+   - Handles user interaction and output formatting
+
+**Rationale:**
+- Prevents circular dependencies
+- Makes testing easier (can test `gh_wrapper` without mocking `StoreContext`)
+- Follows Dependency Inversion Principle (depend on abstractions, not concretions)
+- Infrastructure is "plug and play" - could swap `gh` for direct API calls without changing domain
 

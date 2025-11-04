@@ -158,34 +158,34 @@ Based on spec requirements:
 
 ---
 
-## Testing Strategy (for later implementation)
+## Implementation Order
 
-### Unit Tests
-- `test_format_note_header()` - verify formatting
-- `test_invalid_input()` - non-numeric input handling
-- Mock `gh_wrapper.get_issue()` for isolation
-
-### Integration Tests
-- Test with real `gh` CLI (if available)
-- Test multiple issue numbers
-- Test issue not found scenario
-- Test GHES vs github.com URL formatting
+1. ✅ Ensure `context.py` exists with `StoreContext`
+2. ✅ Ensure `gh_wrapper.py` has basic infrastructure
+3. ✅ **Implement `gh_wrapper.get_issue()`**
+4. ✅ **Create `commands/show.py` with basic implementation**
+5. ✅ **Wire up in `cli.py`**
+6. ⏭️ **Manual testing with real repo**
+7. ⏭️ **Add unit tests**
 
 ---
 
-## Questions to Resolve
+## Questions Resolved
 
-1. **Multi-issue behavior**: Spec says `note_idents` is plural - should simplified version handle multiple IDs or just one?
-   - **Recommendation:** Support multiple from start (minimal extra code)
+1. **Multi-issue behavior**: ✅ Implemented support for multiple IDs - minimal extra code via iteration
+2. **URL construction**: ✅ Added `build_issue_url()` method to `StoreContext` class
+3. **JSON fields needed**: ✅ Using `number` and `title` from API response
+4. **Error verbosity**: ✅ Passing through `gh` stderr + context-specific error messages
 
-2. **URL construction**: Should this be a helper in `context.py` or `show.py`?
-   - **Recommendation:** Add `build_issue_url(issue_number: int)` to `StoreContext`
+---
 
-3. **JSON fields needed**: What fields does `gh api` return that we need?
-   - Minimum: `number`, `title`, `html_url`
-   - `html_url` would eliminate need to construct URL manually
+## Out of Scope (Deferred to Full Implementation)
 
-4. **Error verbosity**: How much detail for failed API calls?
+- ❌ `resolve_note_ident()` - title regex search
+- ❌ Fuzzy matching
+- ❌ Filtering by labels/milestones
+- ❌ Color/formatting options
+- ❌ Pagination for large numbers of issues
    - **Recommendation:** Just pass through `gh` stderr as per design doc
 
 ---
