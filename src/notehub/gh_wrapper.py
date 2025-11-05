@@ -43,3 +43,68 @@ def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
     # Parse and return JSON
     return json.loads(result.stdout)
     return json.loads(result.stdout)
+
+def check_gh_auth(host: str = "github.com") -> bool:
+    """
+    Check if gh is authenticated for the specified host.
+    
+    Args:
+        host: GitHub host (e.g., 'github.com' or 'github.enterprise.com')
+        
+    Returns:
+        bool: True if authenticated, False otherwise
+    """
+    result = subprocess.run(
+        ["gh", "auth", "status", "--hostname", host],
+        capture_output=True
+    )
+    return result.returncode == 0
+
+
+def get_gh_user(host: str = "github.com") -> str | None:
+    """
+    Get the authenticated username for the specified host.
+    
+    Args:
+        host: GitHub host (e.g., 'github.com' or 'github.enterprise.com')
+        
+    Returns:
+        str: Username if authenticated, None otherwise
+    """
+    # gh auth status outputs to stderr, format: "Logged in to <host> as <user> (...)"
+    result = subprocess.run(
+        ["gh", "auth", "status", "--hostname", host],
+        capture_output=True,
+        text=True
+    )
+    
+    if result.returncode != 0:
+        return None
+    
+    # Parse stderr for username
+    # Expected format: "✓ Logged in to github.com as username (/path/to/config)"
+    for line in result.stderr.split('\n'):
+        if 'Logged in to' in line and host in line:
+            parts = line.split()
+            try:
+                # Find "as" and get the next word
+                as_index = parts.index('as')
+                return parts[as_index + 1]
+            except (ValueError, IndexError):
+                pass
+    
+    return None
+
+
+def check_gh_installed() -> bool:
+    """
+    Check if gh CLI is installed and available.
+    
+    Returns:
+        bool: True if gh is found, False otherwise
+    """
+    result = subprocess.run(
+        ["which", "gh"],
+        capture_output=True
+    )
+    return result.returncode == 0
