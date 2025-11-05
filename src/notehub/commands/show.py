@@ -4,7 +4,7 @@ import sys
 from argparse import Namespace
 
 from ..context import StoreContext
-from ..gh_wrapper import get_issue, GhError
+from ..gh_wrapper import get_issue
 
 
 def format_note_header(issue: dict) -> str:
@@ -48,12 +48,16 @@ def run(args: Namespace) -> int:
             had_error = True
             continue
         
-        # Fetch issue data - pass primitives to gh_wrapper
+        # Fetch issue data
         try:
             issue = get_issue(context.host, context.org, context.repo, issue_number)
-        except GhError as e:
+        except RuntimeError:
             # Error message already printed to stderr by get_issue
             print(f"Error: Issue #{issue_number} not found in {context.repo_identifier()}", file=sys.stderr)
+            had_error = True
+            continue
+        except Exception as e:
+            print(f"Error: Unexpected failure: {e}", file=sys.stderr)
             had_error = True
             continue
         

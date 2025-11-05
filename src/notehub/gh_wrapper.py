@@ -3,6 +3,7 @@ import subprocess
 import sys
 
 def create_issue():
+    """Create a new issue interactively using gh CLI."""
     subprocess.run(["gh", "issue", "create"])
 
 def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
@@ -19,7 +20,7 @@ def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
         dict: Parsed JSON response from GitHub API
         
     Raises:
-        GhError: If gh command fails (issue not found, auth error, etc.)
+        RuntimeError: If gh command fails (issue not found, auth error, etc.)
     """
     # Build API path
     api_path = f"repos/{org}/{repo}/issues/{issue_number}"
@@ -37,9 +38,8 @@ def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
     if result.returncode != 0:
         # Pass through stderr to user
         print(result.stderr, file=sys.stderr, end="")
-        raise GhError(result.returncode, result.stderr)
+        raise RuntimeError(f"gh command failed with exit code {result.returncode}")
     
     # Parse and return JSON
     return json.loads(result.stdout)
-    # Parse and return JSON
     return json.loads(result.stdout)
