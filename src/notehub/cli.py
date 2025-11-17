@@ -1,3 +1,4 @@
+import sys
 import argparse
 from notehub.commands import add, show
 from .commands import status
@@ -35,29 +36,11 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(args):
-    parser = argparse.ArgumentParser(prog="notehub")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+def main(args=None):
+    args = sys.argv[1:] if not args else args
+    parser = create_parser()
+    parsed = parser.parse_args(args)  # None means use sys.argv[1:]
     
-    # Add command
-    add_parser = subparsers.add_parser("add", help="Create a new note-issue")
-    
-    # Show command
-    show_parser = subparsers.add_parser("show", help="Show an issue")
-    show_parser.add_argument("note_idents", nargs="+", help="Note identifier(s) (issue numbers or URLs)")
-    add_store_arguments(show_parser)
-    show_parser.set_defaults(func=show.run)
-
-    # Add status subcommand
-    status_parser = subparsers.add_parser(
-        'status',
-        help='Show context, authentication status, and user identity'
-    )
-    # status command uses common context flags (--host, --org, --repo, --global)
-    # which should already be added to the parent parser
-    
-    parsed = parser.parse_args(args)
-
     if parsed.command == "add":
         add.run(parsed)
     elif parsed.command == "show":

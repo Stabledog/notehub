@@ -25,12 +25,11 @@ A thin, opinionated wrapper over `gh` for fast note-taking using Github issues f
 
 ## Context resolution
 - Store context resolved as follows:
-    - Repo: 
-        - --repo|-r [name] is top choice
-        - git config custom key 'notehub.repo' ( skip if -g|--global)
-        - Env 'NotehubRepo' 
-        - git config (global) key 'notehub.repo' 
-        - 'notehub.default' (literal repo name) 
+    - Host:
+        - --host|-h is top choice
+        - auto-detect from local working copy unless -g|--global
+        - git config (global) custom key 'notehub.host'
+        - 'github.com'
         
     - Org:
         - --org|-o is top choice
@@ -38,12 +37,14 @@ A thin, opinionated wrapper over `gh` for fast note-taking using Github issues f
         - Env 'NotehubOrg' 
         - git config (global) 'notehub.org' 
         - notehub.$USER ($USER being the user's shell environment value)
+    
+    - Repo: 
+        - --repo|-r [name] is top choice
+        - git config custom key 'notehub.repo' ( skip if -g|--global)
+        - Env 'NotehubRepo' 
+        - git config (global) key 'notehub.repo' 
+        - 'notehub.default' (literal repo name) 
 
-    - Host:
-        - --host|-h is top choice
-        - auto-detect from local working copy unless -g|--global
-        - git config (global) custom key 'notehub.host'
-        - 'github.com'
 
 ---
 
