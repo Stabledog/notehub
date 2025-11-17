@@ -63,18 +63,23 @@ class StoreContext:
         if hasattr(args, 'host') and args.host:
             return args.host
         
-        # 2. Auto-detect from git remote (unless --global)
+        # 2. GH_HOST environment variable
+        env_host = os.environ.get('GH_HOST')
+        if env_host:
+            return env_host
+        
+        # 3. Auto-detect from git remote (unless --global)
         if not global_only:
             remote_host = cls._get_git_remote_host()
             if remote_host:
                 return remote_host
         
-        # 3. git config --global notehub.host
+        # 4. git config --global notehub.host
         git_host = cls._get_git_config('notehub.host', global_only=True)
         if git_host:
             return git_host
         
-        # 4. Default to github.com
+        # 5. Default to github.com
         return 'github.com'
     
     @classmethod
@@ -216,15 +221,22 @@ class StoreContext:
                 # Parse URL
                 # HTTPS: https://github.com/org/repo.git -> org
                 # SSH: git@github.com:org/repo.git -> org
+                # SCP-like: bbgithub:org/repo.git -> org
                 if url.startswith('https://'):
                     parts = url.split('//')
                     if len(parts) > 1:
                         path_parts = parts[1].split('/')[1:]  # Skip host
                         if path_parts:
                             return path_parts[0]
-                elif ':' in url and '@' in url:
-                    # SSH format
-                    path = url.split(':')[1]
+                elif ':' in url:
+                    # Handle both SSH (git@host:org/repo) and SCP-like (host:org/repo)
+                    if '@' in url:
+                        # SSH format: git@github.com:org/repo.git
+                        path = url.split(':')[1]
+                    else:
+                        # SCP-like format: bbgithub:org/repo.git
+                        path = url.split(':', 1)[1]
+                    
                     org = path.split('/')[0]
                     return org
         except FileNotFoundError:

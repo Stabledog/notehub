@@ -14,11 +14,7 @@
                 "add"
             ],
             "cwd": "${workspaceFolder}",
-            "stopOnEntry": false,
-            "env": {
-                "GH_TOKEN":"${env:GH_ENTERPRISE_TOKEN}",
-                "GH_HOST":"${env:GH_HOST_ENTERPRISE}"
-            }
+            "stopOnEntry": false
         },
         {
             "name": "notehub status 1",
@@ -29,11 +25,7 @@
                 "status"
             ],
             "cwd": "${workspaceFolder}",
-            "stopOnEntry": false,
-            "env": {
-                "GH_TOKEN":"${env:GH_ENTERPRISE_TOKEN}",
-                "GH_HOST":"${env:GH_HOST_ENTERPRISE}"
-            }
+            "stopOnEntry": false
         }
     ]
 }

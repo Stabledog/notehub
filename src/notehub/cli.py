@@ -30,8 +30,8 @@ def create_parser() -> argparse.ArgumentParser:
         'status',
         help='Show context, authentication status, and user identity'
     )
-    # status command uses common context flags (--host, --org, --repo, --global)
-    # which should already be added to the parent parser
+    add_store_arguments(status_parser)
+    status_parser.set_defaults(func=status.run)
     
     return parser
 
