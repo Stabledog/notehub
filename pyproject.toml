@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "notehub"
+version = "0.1.0"
+description = "A note-taking tool integrated with GitHub issues"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "PyGithub",
+    "pyyaml",
+]
+
+[project.scripts]
+notehub = "notehub.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["notehub", "notehub.commands"]
