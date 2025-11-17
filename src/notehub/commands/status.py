@@ -1,9 +1,26 @@
 import subprocess
 import sys
+import os
 from argparse import Namespace
 
 from ..context import StoreContext
 from ..gh_wrapper import check_gh_installed, check_gh_auth, get_gh_user
+
+
+def get_env_auth_source() -> str | None:
+    """
+    Return which environment variable provides authentication, if any.
+    
+    Returns:
+        str: Name of the environment variable, or None if none set
+    """
+    if os.environ.get('GH_ENTERPRISE_TOKEN_2'):
+        return 'GH_ENTERPRISE_TOKEN_2'
+    if os.environ.get('GH_ENTERPRISE_TOKEN'):
+        return 'GH_ENTERPRISE_TOKEN'
+    if os.environ.get('GH_TOKEN'):
+        return 'GH_TOKEN'
+    return None
 
 
 def run(args: Namespace) -> int:
@@ -46,6 +63,13 @@ def run(args: Namespace) -> int:
     # Display Authentication Status
     print("Authentication:")
     
+    # Show environment-based auth if present
+    env_auth = get_env_auth_source()
+    if env_auth:
+        print(f"  Source: Environment variable ({env_auth})")
+    else:
+        print(f"  Source: gh auth (stored credentials)")
+    
     is_authenticated = check_gh_auth(context.host)
     
     if is_authenticated:
@@ -55,7 +79,12 @@ def run(args: Namespace) -> int:
             print(f"  User:   {user}")
     else:
         print(f"  Status: ✗ Not authenticated to {context.host}")
-        print(f"  Run:    gh auth login --hostname {context.host}")
+        print()
+        print(f"  Setup options:")
+        print(f"    1. gh auth login --hostname {context.host}")
+        print(f"    2. export GH_ENTERPRISE_TOKEN=<token>")
+        print(f"    3. export GH_ENTERPRISE_TOKEN_2=<token>")
+        print(f"    4. export GH_TOKEN=<token>")
     
     return 0
 
