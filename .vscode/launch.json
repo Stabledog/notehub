@@ -26,6 +26,17 @@
             ],
             "cwd": "${workspaceFolder}",
             "stopOnEntry": false
+        },
+        {
+            "name": "notehub add in ~",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "notehub",
+            "args": [
+                "add"
+            ],
+            "cwd": "${env:HOME}",
+            "stopOnEntry": false
         }
     ]
 }

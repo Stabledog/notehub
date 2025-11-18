@@ -27,12 +27,13 @@ A thin, opinionated wrapper over `gh` for fast note-taking using Github issues f
 - Store context resolved as follows:
     - Host:
         - --host|-h is top choice
+        - GH_HOST environment variable
         - auto-detect from local working copy unless -g|--global
         - git config (global) custom key 'notehub.host'
         - 'github.com'
         
     - Org:
-        - --org|-o is top choice
+        - --org|-o [name] is top choice
         - auto-detect from local working copy unless -g|--global
         - Env 'NotehubOrg' 
         - git config (global) 'notehub.org' 
@@ -40,6 +41,7 @@ A thin, opinionated wrapper over `gh` for fast note-taking using Github issues f
     
     - Repo: 
         - --repo|-r [name] is top choice
+            - If name is '.', it will be parsed from the local git remote spec
         - git config custom key 'notehub.repo' ( skip if -g|--global)
         - Env 'NotehubRepo' 
         - git config (global) key 'notehub.repo' 
