@@ -52,6 +52,19 @@
             ],
             "cwd": "${env:HOME}",
             "stopOnEntry": false
+        },
+        {
+            "name": "notehub show -r .",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "notehub",
+            "args": [
+                "show",
+                "-r",
+                ".",
+                "test"
+            ],
+            "stopOnEntry": false
         }
     ]
 }

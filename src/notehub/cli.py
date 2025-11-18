@@ -1,7 +1,6 @@
 import sys
 import argparse
-from notehub.commands import add, show
-from .commands import status
+from .commands import add, show, status
 
 def add_store_arguments(parser):
     """Add common store context arguments to a parser."""
@@ -19,33 +18,38 @@ def create_parser() -> argparse.ArgumentParser:
     # Add command
     add_parser = subparsers.add_parser("add", help="Create a new note-issue")
     add_store_arguments(add_parser)
+    add_parser.set_defaults(handler=add.run)
     
     # Show command
-    show_parser = subparsers.add_parser("show", help="Show an issue")
-    show_parser.add_argument("note_idents", nargs="+", help="Note identifier(s) (issue numbers or URLs)")
+    show_parser = subparsers.add_parser(
+        'show',
+        help='Display note-header and URL for specified issues'
+    )
+    show_parser.add_argument(
+        'note_idents',
+        nargs='+',
+        metavar='NOTE-IDENT',
+        help='Issue number or title regex (one or more required)'
+    )
     add_store_arguments(show_parser)
-    show_parser.set_defaults(func=show.run)
+    show_parser.set_defaults(handler=show.run)
 
-    # Add status subcommand
+    # Status command
     status_parser = subparsers.add_parser(
         'status',
         help='Show context, authentication status, and user identity'
     )
     add_store_arguments(status_parser)
-    status_parser.set_defaults(func=status.run)
+    status_parser.set_defaults(handler=status.run)
     
     return parser
 
 
 def main(args=None):
+    """Parse arguments and dispatch to appropriate command."""
     args = sys.argv[1:] if not args else args
     parser = create_parser()
     parsed = parser.parse_args(args)
     
-    if parsed.command == "add":
-        return add.run(parsed)
-    elif parsed.command == "show":
-        return show.run(parsed)
-    elif parsed.command == 'status':
-        return status.run(parsed)
+    return parsed.handler(parsed)
 

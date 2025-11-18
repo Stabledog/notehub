@@ -1,71 +1,109 @@
-"""Show command - display note-header and URLs for issues."""
+"""Show command - display note-header and URLs for specified issues."""
 
+import re
 import sys
 from argparse import Namespace
 
 from ..context import StoreContext
-from ..gh_wrapper import get_issue
+from ..gh_wrapper import GhError, get_issue, list_issues
+
+
+def resolve_note_ident(context: StoreContext, ident: str) -> tuple[int | None, str | None]:
+    """
+    Resolve note-ident to issue number.
+    
+    Args:
+        context: Store context (host/org/repo)
+        ident: Issue number (e.g., "123") or title regex (e.g., "bug.*login")
+    
+    Returns:
+        Tuple of (issue_number, error_message)
+        On success: (123, None)
+        On failure: (None, "error description")
+    """
+    if ident.isdigit():
+        # Direct issue number - return as-is
+        return (int(ident), None)
+    else:
+        # Title regex - fetch only number and title for matching
+        try:
+            all_issues = list_issues(
+                context.host, 
+                context.org, 
+                context.repo, 
+                fields="number,title"
+            )
+            
+            # Apply regex to titles (case-insensitive)
+            pattern = re.compile(ident, re.IGNORECASE)
+            matches = [issue for issue in all_issues if pattern.search(issue['title'])]
+            
+            if len(matches) == 0:
+                return (None, f"No issues found matching '{ident}'")
+            
+            if len(matches) > 1:
+                print(
+                    f"Warning: '{ident}' matched {len(matches)} issues, using first match",
+                    file=sys.stderr
+                )
+            
+            return (matches[0]["number"], None)
+            
+        except GhError as e:
+            return (None, f"Failed to list issues: {e.stderr.strip()}")
 
 
 def format_note_header(issue: dict) -> str:
     """
-    Format issue as note-header: [#123] Title.
+    Format issue as note-header: [#123] Title
     
     Args:
-        issue: Issue dict from GitHub API
-        
+        issue: Issue dict with 'number' and 'title' keys
+    
     Returns:
-        str: Formatted note-header
+        Formatted string
     """
-    number = issue["number"]
-    title = issue["title"]
-    return f"[#{number}] {title}"
+    return f"[#{issue['number']}] {issue['title']}"
 
 
 def run(args: Namespace) -> int:
     """
     Execute show command.
     
-    Args:
-        args: Parsed command-line arguments with note_idents attribute
-        
+    Displays note-header and URL for each specified note-ident.
+    Continues processing all idents even if some fail.
+    
     Returns:
-        int: Exit code (0 for success, 1 for error)
+        0 if all successful, 1 if any errors occurred
     """
-    # Resolve context
     context = StoreContext.resolve(args)
+    any_errors = False
     
-    # Track if any errors occurred
-    had_error = False
-    
-    # Process each note-ident
-    for ident in args.note_idents:
-        # Validate it's numeric
+    for i, ident in enumerate(args.note_idents):
+        # Add blank line between issues (except before first)
+        if i > 0:
+            print()
+        
         try:
-            issue_number = int(ident)
-        except ValueError:
-            print(f"Error: '{ident}' is not a valid issue number", file=sys.stderr)
-            had_error = True
-            continue
-        
-        # Fetch issue data
-        try:
-            issue = get_issue(context.host, context.org, context.repo, issue_number)
-        except RuntimeError:
-            # Error message already printed to stderr by get_issue
-            print(f"Error: Issue #{issue_number} not found in {context.repo_identifier()}", file=sys.stderr)
-            had_error = True
-            continue
-        except Exception as e:
-            print(f"Error: Unexpected failure: {e}", file=sys.stderr)
-            had_error = True
-            continue
-        
-        # Format and print output
-        note_header = format_note_header(issue)
-        issue_url = context.build_issue_url(issue_number)
-        
-        print(note_header)
-        print(f"    {issue_url}")
+            issue_num, error = resolve_note_ident(context, ident)
+            
+            if error:
+                print(f"Error: {error}", file=sys.stderr)
+                any_errors = True
+                continue
+            
+            # Fetch full issue data (includes html_url which list_issues uses 'url')
+            issue = get_issue(context.host, context.org, context.repo, issue_num)
+            
+            # Display note-header
+            print(format_note_header(issue))
+            
+            # Display URL (indented with 2 spaces)
+            url = issue["html_url"]
+            print(f"  {url}")
+            
+        except GhError as e:
+            print(f"Error processing '{ident}': {e.stderr.strip()}", file=sys.stderr)
+            any_errors = True
     
-    return 1 if had_error else 0
+    return 1 if any_errors else 0

@@ -29,7 +29,7 @@ def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
     Mimics the gh_enterprise wrapper pattern:
     - Checks GH_ENTERPRISE_TOKEN_2 → GH_ENTERPRISE_TOKEN → GH_TOKEN
     - Sets both GH_TOKEN and GH_ENTERPRISE_TOKEN in subprocess env
-    - Sets GH_HOST to target correct GitHub instance
+    - Sets GH_HOST to target the correct GitHub instance
     
     Args:
         host: GitHub hostname (e.g., 'github.com' or 'my.github.com')
@@ -155,35 +155,72 @@ def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
     Fetch issue JSON via gh api.
     
     Args:
-        host: GitHub host (e.g., 'github.com' or 'github.enterprise.com')
-        org: Organization/owner name
+        host: GitHub host (e.g., 'github.com')
+        org: Organization or user name
         repo: Repository name
-        issue_number: Issue number to fetch
-        
+        issue_number: Issue number
+    
     Returns:
-        dict: Parsed JSON response from GitHub API
-        
+        Issue dict with: number, title, html_url, body
+    
     Raises:
-        RuntimeError: If gh command fails (issue not found, auth error, etc.)
+        GhError: If gh command fails
     """
-    # Build API path
-    api_path = f"repos/{org}/{repo}/issues/{issue_number}"
+    # Use --jq to filter to only the fields we need
+    jq_filter = '{number: .number, title: .title, html_url: .html_url, body: .body}'
     
-    # Build command with proper auth environment
-    base_cmd = ["gh", "api", api_path]
+    base_cmd = [
+        "gh", "api",
+        f"repos/{org}/{repo}/issues/{issue_number}",
+        "--jq", jq_filter
+    ]
+    
     cmd, env = _prepare_gh_cmd(host, base_cmd)
-    
-    # Execute command
     result = subprocess.run(cmd, capture_output=True, text=True, env=env)
     
     if result.returncode != 0:
-        # Pass through stderr to user
-        print(result.stderr, file=sys.stderr, end="")
-        _handle_gh_error(result, host)
-        raise RuntimeError(f"gh command failed with exit code {result.returncode}")
+        print(result.stderr, file=sys.stderr)
+        raise GhError(result.returncode, result.stderr)
     
-    # Parse and return JSON
     return json.loads(result.stdout)
+
+
+def list_issues(host: str, org: str, repo: str, fields: str = "number,title,url,labels", limit: int = 1000) -> list[dict]:
+    """
+    List all issues with 'notehub' label via gh issue list.
+    
+    Args:
+        host: GitHub host
+        org: Organization or user name
+        repo: Repository name
+        fields: Comma-separated list of fields to fetch (e.g., "number,title,body,url,labels")
+        limit: Maximum number of issues to return (default 1000)
+    
+    Returns:
+        List of issue dicts with requested fields
+    
+    Raises:
+        GhError: If gh command fails
+    """
+    repo_arg = build_repo_arg(host, org, repo)
+    
+    base_cmd = [
+        "gh", "issue", "list",
+        "--repo", repo_arg,
+        "--label", "notehub",
+        "--limit", str(limit),
+        "--json", fields
+    ]
+    
+    cmd, env = _prepare_gh_cmd(host, base_cmd)
+    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    
+    if result.returncode != 0:
+        print(result.stderr, file=sys.stderr)
+        raise GhError(result.returncode, result.stderr)
+    
+    return json.loads(result.stdout)
+
 
 def check_gh_auth(host: str = "github.com") -> bool:
     """
