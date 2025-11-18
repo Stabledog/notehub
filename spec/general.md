@@ -27,3 +27,9 @@
     filename='/tmp/instream.json'
     with open(filename,...
 
+1. Authentication and context resolution
+
+Working with the `gh` authentication is tricky.  `gh_wrapper.py` does what works, and that may not agree with public sources about best-practices or the recommendations of the `gh` owners.
+
+Do not vary from using `_prepare_gh_cmd`, `_handle_gh_error`, etc.  We want all commands to use consistent interaction patterns with `gh` to avoid chaos.
+

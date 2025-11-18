@@ -1,6 +1,6 @@
 import sys
 import argparse
-from .commands import add, show, status, edit
+from .commands import add, show, status, edit, list
 
 def add_store_arguments(parser):
     """Add common store context arguments to a parser."""
@@ -54,6 +54,14 @@ def create_parser() -> argparse.ArgumentParser:
     )
     add_store_arguments(edit_parser)
     edit_parser.set_defaults(handler=edit.run)
+    
+    # List command
+    list_parser = subparsers.add_parser(
+        'list',
+        help='List all note-issues'
+    )
+    add_store_arguments(list_parser)
+    list_parser.set_defaults(handler=list.run)
     
     return parser
 
