@@ -18,6 +18,7 @@ def create_parser() -> argparse.ArgumentParser:
     
     # Add command
     add_parser = subparsers.add_parser("add", help="Create a new note-issue")
+    add_store_arguments(add_parser)
     
     # Show command
     show_parser = subparsers.add_parser("show", help="Show an issue")

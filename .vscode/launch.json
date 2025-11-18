@@ -11,7 +11,9 @@
             "request": "launch",
             "module": "notehub",
             "args": [
-                "add"
+                "add",
+                "-r",
+                "."
             ],
             "cwd": "${workspaceFolder}",
             "stopOnEntry": false

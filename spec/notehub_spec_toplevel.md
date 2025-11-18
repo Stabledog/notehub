@@ -50,14 +50,6 @@ A thin, opinionated wrapper over `gh` for fast note-taking using Github issues f
 
 ---
 
-## Configuration
-
-- User configures host,repo,org manually using `git config` command,
-    e.g:
-    `git config notehub.host my.enterprise.github.com`
-    `git config --global notehub.org notehub.weasel`
-- Editor:  respects $EDITOR environ, defaults to vi
-
 ## Command structure
 
 ```
