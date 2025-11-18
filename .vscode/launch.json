@@ -43,7 +43,7 @@
             "stopOnEntry": false
         },
         {
-            "name": "notehub add in ~",
+            "name": "notehub add (bare)",
             "type": "debugpy",
             "request": "launch",
             "module": "notehub",

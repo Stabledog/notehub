@@ -282,9 +282,19 @@ def ensure_label_exists(host: str, org: str, repo: str, label_name: str, color: 
         return True
     
     # Check if failure was due to label already existing
-    if result.returncode != 0 and "already_exists" in result.stderr.lower():
-        return True
+    # GitHub returns HTTP 422 with "already_exists" in the JSON response
+    if result.returncode != 0:
+        # Try parsing stdout as JSON to check for already_exists error
+        try:
+            error_data = json.loads(result.stdout)
+            if "errors" in error_data:
+                for error in error_data["errors"]:
+                    if error.get("code") == "already_exists":
+                        return True
+        except (json.JSONDecodeError, KeyError):
+            pass
     
     # Real error - print it and return False
-    print(result.stderr, file=sys.stderr, end="")
+    if result.stdout:
+        print(result.stdout, file=sys.stderr, end="")
     return False

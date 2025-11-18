@@ -71,6 +71,11 @@ def get_editor() -> str:
 ### 1.5 `gh_wrapper.py` - GitHub CLI Wrapper
 **Responsibility**: Execute `gh` commands and manage stdin/stdout/stderr.
 
+**Label Convention**: All notehub-created issues are tagged with the `notehub` label. This label is:
+- Automatically added during issue creation
+- Used as a filter when listing/searching issues
+- Ensures notehub only operates on its own issues, not interfering with other GitHub issues
+
 ```python
 # Public API
 class GhError(Exception):
@@ -85,7 +90,7 @@ class GhResult:
     stderr: str
 
 def create_issue(host: str, org: str, repo: str, interactive: bool = True) -> GhResult:
-    """Invoke gh issue create."""
+    """Invoke gh issue create with 'notehub' label."""
     pass
 
 def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
@@ -97,11 +102,11 @@ def update_issue(host: str, org: str, repo: str, issue_number: int, body: str) -
     pass
 
 def list_issues(host: str, org: str, repo: str, filters: dict = None) -> list[dict]:
-    """List issues via gh issue list --json."""
+    """List issues with 'notehub' label via gh issue list --json."""
     pass
 
 def search_issues(host: str, org: str, repo: str, query: str) -> list[dict]:
-    """Search issues via gh search issues."""
+    """Search issues with 'notehub' label via gh search issues."""
     pass
 ```
 
@@ -144,7 +149,7 @@ def format_note_header(issue: dict) -> str:
 ```
 
 ### 1.9 `commands/list.py` - List Command
-**Responsibility**: List all note-issues.
+**Responsibility**: List all note-issues (filtered by 'notehub' label).
 
 ```python
 # Public API
@@ -154,7 +159,7 @@ def run(args: Namespace) -> int:
 ```
 
 ### 1.10 `commands/find.py` - Find Command
-**Responsibility**: Search note-issue bodies with regex and display matches in context.
+**Responsibility**: Search note-issue bodies with regex and display matches in context (filtered by 'notehub' label).
 
 ```python
 # Public API
@@ -305,7 +310,7 @@ sequenceDiagram
     CLI->>Add: run(args)
     Add->>Ctx: context (via resolve)
     Add->>GH: create_issue(host, org, repo, interactive=True)
-    GH->>GH_CLI: subprocess.run(["gh", "issue", "create", "--repo", ...])
+    GH->>GH_CLI: subprocess.run(["gh", "issue", "create", "--repo", ..., "--label", "notehub"])
     
     alt gh not installed or not authenticated
         GH_CLI-->>GH: error (returncode != 0)
@@ -344,7 +349,7 @@ sequenceDiagram
     CLI->>Edit: run(args)
     Edit->>Show: resolve_note_ident(context, "bug")
     Show->>GH: search_issues(host, org, repo, "bug in:title")
-    GH->>GH_CLI: gh search issues ...
+    GH->>GH_CLI: gh search issues ... label:notehub
     
     alt gh error
         GH_CLI-->>GH: error
@@ -393,7 +398,7 @@ sequenceDiagram
     Ctx-->>CLI: context
     CLI->>Find: run(args)
     Find->>GH: list_issues(context)
-    GH->>GH_CLI: gh issue list --json number,title,body
+    GH->>GH_CLI: gh issue list --json number,title,body --label notehub
     GH_CLI-->>GH: JSON array
     GH-->>Find: [{"number": 45, "body": "..."}, ...]
     loop For each issue
@@ -591,7 +596,28 @@ def run(args):
 - **Maintenance**: No need to track API changes
 - **Error Messages**: `gh` provides clear, actionable error messages
 
-### 5.2 Why No Prerequisite Checks in Commands?
+### 5.2 Why the 'notehub' Label?
+
+**Purpose**: Distinguish notehub-managed issues from regular GitHub issues.
+
+**Benefits**:
+1. **Separation of Concerns**: Notehub operations don't interfere with regular issue tracking
+2. **Filtering**: Easy to identify which issues are notes vs. actual project issues
+3. **Safety**: Commands like `list` and `find` only show notehub notes
+4. **Flexibility**: Users can still see all issues in GitHub UI, with notehub notes clearly labeled
+
+**Implementation**:
+- All `create_issue()` calls include `--label notehub`
+- All `list_issues()` calls include `--label notehub` filter
+- All `search_issues()` calls include `label:notehub` in query
+- Label is created automatically by GitHub if it doesn't exist
+
+**User Experience**:
+- In GitHub UI: Issues show "notehub" label badge
+- In notehub CLI: Label is invisible to user (implementation detail)
+- Users can manually add/remove label if needed (though not recommended)
+
+### 5.3 Why No Prerequisite Checks in Commands?
 - **Separation of Concerns**: `status` command is the diagnostic tool
 - **Reduced Complexity**: Commands focus on their single responsibility
 - **Better Performance**: No redundant validation on every invocation
@@ -599,7 +625,7 @@ def run(args):
 - **User Experience**: If `gh` not installed, any command will fail immediately with clear message
 - **Developer Experience**: Simpler command implementations, easier to maintain
 
-### 5.3 When Should Commands Validate?
+### 5.4 When Should Commands Validate?
 **Never check**:
 - ✗ `gh` installation
 - ✗ Authentication status
