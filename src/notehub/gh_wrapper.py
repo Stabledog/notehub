@@ -101,7 +101,7 @@ def build_repo_arg(host: str, org: str, repo: str) -> str:
     return f"{org}/{repo}"
 
 
-def create_issue(host: str, org: str, repo: str, interactive: bool = True) -> GhResult:
+def create_issue(host: str, org: str, repo: str, interactive: bool = True, labels: list[str] | None = None) -> GhResult:
     """
     Invoke gh issue create in interactive mode.
     
@@ -110,6 +110,7 @@ def create_issue(host: str, org: str, repo: str, interactive: bool = True) -> Gh
         org: Organization/owner name
         repo: Repository name
         interactive: If True, pass stdin/stdout/stderr to user terminal
+        labels: List of label names to apply to the issue
         
     Returns:
         GhResult: Result (stdout/stderr will be empty in interactive mode)
@@ -119,6 +120,12 @@ def create_issue(host: str, org: str, repo: str, interactive: bool = True) -> Gh
     """
     repo_arg = build_repo_arg(host, org, repo)
     base_cmd = ["gh", "issue", "create", "--repo", repo_arg]
+    
+    # Add labels if provided
+    if labels:
+        for label in labels:
+            base_cmd.extend(["--label", label])
+    
     cmd, env = _prepare_gh_cmd(host, base_cmd)
     
     if interactive:
@@ -245,3 +252,39 @@ def check_gh_installed() -> bool:
         capture_output=True
     )
     return result.returncode == 0
+
+
+def ensure_label_exists(host: str, org: str, repo: str, label_name: str, color: str, description: str = "") -> bool:
+    """
+    Ensure a label exists in the repository, creating it if necessary.
+    
+    Args:
+        host: GitHub host
+        org: Organization/owner name
+        repo: Repository name
+        label_name: Label name to ensure exists
+        color: Hex color code (without #), e.g., "FFC107" for yellow
+        description: Label description
+        
+    Returns:
+        bool: True if label exists or was created, False on error
+    """
+    api_path = f"repos/{org}/{repo}/labels"
+    base_cmd = ["gh", "api", api_path, "-X", "POST",
+                "-f", f"name={label_name}",
+                "-f", f"color={color}",
+                "-f", f"description={description}"]
+    cmd, env = _prepare_gh_cmd(host, base_cmd)
+    
+    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    
+    if result.returncode == 0:
+        return True
+    
+    # Check if failure was due to label already existing
+    if result.returncode != 0 and "already_exists" in result.stderr.lower():
+        return True
+    
+    # Real error - print it and return False
+    print(result.stderr, file=sys.stderr, end="")
+    return False
