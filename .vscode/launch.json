@@ -65,6 +65,19 @@
                 "test"
             ],
             "stopOnEntry": false
+        },
+        {
+            "name": "notehub edit",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "notehub",
+            "args": [
+                "edit",
+                "5",
+                "-r",
+                "."
+            ],
+            "stopOnEntry": false
         }
     ]
 }

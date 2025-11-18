@@ -335,3 +335,41 @@ def ensure_label_exists(host: str, org: str, repo: str, label_name: str, color: 
     if result.stdout:
         print(result.stdout, file=sys.stderr, end="")
     return False
+
+
+def update_issue(host: str, org: str, repo: str, issue_number: int, body: str) -> GhResult:
+    """
+    Update issue body via gh issue edit.
+    
+    Args:
+        host: GitHub host
+        org: Organization/owner name  
+        repo: Repository name
+        issue_number: Issue number
+        body: New body content
+    
+    Returns:
+        GhResult
+    
+    Raises:
+        GhError: If gh command fails
+    """
+    repo_arg = build_repo_arg(host, org, repo)
+    base_cmd = [
+        "gh", "issue", "edit", str(issue_number),
+        "--repo", repo_arg,
+        "--body", body
+    ]
+    
+    cmd, env = _prepare_gh_cmd(host, base_cmd)
+    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    
+    if result.returncode != 0:
+        print(result.stderr, file=sys.stderr)
+        raise GhError(result.returncode, result.stderr)
+    
+    return GhResult(
+        returncode=result.returncode, 
+        stdout=result.stdout, 
+        stderr=result.stderr
+    )
