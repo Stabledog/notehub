@@ -28,6 +28,19 @@
             "stopOnEntry": false
         },
         {
+            "name": "notehub status 2",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "notehub",
+            "args": [
+                "status",
+                "-r",
+                "."
+            ],
+            "cwd": "${workspaceFolder}",
+            "stopOnEntry": false
+        },
+        {
             "name": "notehub add in ~",
             "type": "debugpy",
             "request": "launch",

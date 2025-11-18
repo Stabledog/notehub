@@ -111,9 +111,18 @@ class StoreContext:
     @classmethod
     def _resolve_repo(cls, args: Namespace, global_only: bool) -> str:
         """Resolve repo from args, config, env, or default."""
-        # 1. --repo flag
+        # 1. --repo flag (special handling for '.' = auto-detect)
         if hasattr(args, 'repo') and args.repo:
-            return args.repo
+            if args.repo == '.':
+                # Special case: '.' means auto-detect from git remote
+                if not global_only:
+                    remote_repo = cls._get_git_remote_repo()
+                    if remote_repo:
+                        return remote_repo
+                # Fall through if can't auto-detect or --global is set
+            else:
+                # Normal case: explicit repo name provided
+                return args.repo
         
         # 2. git config notehub.repo (local unless --global)
         if not global_only:
@@ -239,6 +248,52 @@ class StoreContext:
                     
                     org = path.split('/')[0]
                     return org
+        except FileNotFoundError:
+            pass
+        
+        return None
+    
+    @staticmethod
+    def _get_git_remote_repo() -> Optional[str]:
+        """
+        Extract repo name from git remote origin URL.
+        
+        Returns:
+            Repository name or None if not detectable
+        """
+        try:
+            result = subprocess.run(
+                ['git', 'remote', 'get-url', 'origin'],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode == 0:
+                url = result.stdout.strip()
+                # Parse URL - handle both HTTPS and SSH formats
+                # HTTPS: https://github.com/org/repo.git -> repo
+                # SSH: git@github.com:org/repo.git -> repo
+                # SCP-like: bbgithub:org/repo.git -> repo
+                if url.startswith('https://'):
+                    parts = url.split('//')
+                    if len(parts) > 1:
+                        path_parts = parts[1].split('/')[2:]  # Skip host and org
+                        if path_parts:
+                            repo = path_parts[0].removesuffix('.git')
+                            return repo
+                elif ':' in url:
+                    # Handle both SSH (git@host:org/repo) and SCP-like (host:org/repo)
+                    if '@' in url:
+                        # SSH format: git@github.com:org/repo.git
+                        path = url.split(':')[1]
+                    else:
+                        # SCP-like format: bbgithub:org/repo.git
+                        path = url.split(':', 1)[1]
+                    
+                    # Extract repo from org/repo.git
+                    if '/' in path:
+                        repo = path.split('/')[1].removesuffix('.git')
+                        return repo
         except FileNotFoundError:
             pass
         
