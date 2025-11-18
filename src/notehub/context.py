@@ -176,6 +176,84 @@ class StoreContext:
         return None
     
     @staticmethod
+    def _expand_ssh_host(alias: str) -> Optional[str]:
+        """
+        Resolve SSH host alias to actual hostname using SSH config.
+        
+        Args:
+            alias: SSH host alias (e.g., 'bbgithub')
+            
+        Returns:
+            Actual hostname or None if not resolvable
+        """
+        try:
+            result = subprocess.run(
+                ['ssh', '-G', alias],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode == 0:
+                # Parse output for "hostname" line
+                for line in result.stdout.split('\n'):
+                    if line.startswith('hostname '):
+                        return line.split(maxsplit=1)[1]
+        except FileNotFoundError:
+            pass
+        
+        return None
+    
+    @staticmethod
+    def _expand_git_url(url: str) -> str:
+        """
+        Expand git URL using insteadOf rules and SSH config.
+        
+        Args:
+            url: Raw URL from git remote (may contain alias)
+            
+        Returns:
+            Expanded URL with full hostname
+        """
+        # First try git config insteadOf rules
+        try:
+            result = subprocess.run(
+                ['git', 'config', '--get-regexp', r'^url\..*\.insteadof$'],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if not line:
+                        continue
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        config_key = parts[0]
+                        alias = parts[1]
+                        
+                        if config_key.startswith('url.') and config_key.endswith('.insteadof'):
+                            base_url = config_key[4:-10]
+                            
+                            if url.startswith(alias):
+                                return url.replace(alias, base_url, 1)
+        except FileNotFoundError:
+            pass
+        
+        # If URL uses SSH short form (alias:org/repo), resolve via SSH config
+        if ':' in url and '@' not in url and not url.startswith('https://'):
+            # Short form: bbgithub:org/repo
+            alias = url.split(':', 1)[0]
+            path = url.split(':', 1)[1]
+            
+            # Try to resolve alias via SSH config
+            actual_host = StoreContext._expand_ssh_host(alias)
+            if actual_host:
+                # Reconstruct as git@actualhost:org/repo
+                return f"git@{actual_host}:{path}"
+        
+        return url
+    
+    @staticmethod
     def _get_git_remote_host() -> Optional[str]:
         """
         Extract host from git remote origin URL.
@@ -192,6 +270,9 @@ class StoreContext:
             )
             if result.returncode == 0:
                 url = result.stdout.strip()
+                # Expand URL using insteadOf rules
+                url = StoreContext._expand_git_url(url)
+                
                 # Parse URL - handle both HTTPS and SSH formats
                 # HTTPS: https://github.com/org/repo.git
                 # SSH: git@github.com:org/repo.git
@@ -227,6 +308,9 @@ class StoreContext:
             )
             if result.returncode == 0:
                 url = result.stdout.strip()
+                # Expand URL using insteadOf rules
+                url = StoreContext._expand_git_url(url)
+                
                 # Parse URL
                 # HTTPS: https://github.com/org/repo.git -> org
                 # SSH: git@github.com:org/repo.git -> org
@@ -270,6 +354,9 @@ class StoreContext:
             )
             if result.returncode == 0:
                 url = result.stdout.strip()
+                # Expand URL using insteadOf rules
+                url = StoreContext._expand_git_url(url)
+                
                 # Parse URL - handle both HTTPS and SSH formats
                 # HTTPS: https://github.com/org/repo.git -> repo
                 # SSH: git@github.com:org/repo.git -> repo
