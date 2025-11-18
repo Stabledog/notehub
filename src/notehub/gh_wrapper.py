@@ -3,6 +3,24 @@ import subprocess
 import sys
 import os
 from typing import Optional
+from dataclasses import dataclass
+
+
+class GhError(Exception):
+    """gh CLI invocation failed."""
+    def __init__(self, returncode: int, stderr: str):
+        self.returncode = returncode
+        self.stderr = stderr
+        super().__init__(f"gh CLI failed with exit code {returncode}")
+
+
+@dataclass
+class GhResult:
+    """Result from gh CLI invocation."""
+    returncode: int
+    stdout: str
+    stderr: str
+
 
 def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
     """
@@ -65,9 +83,65 @@ def _handle_gh_error(result: subprocess.CompletedProcess, host: str) -> None:
             print(f"   Or:  export GH_TOKEN=<token>", file=sys.stderr)
 
 
-def create_issue():
-    """Create a new issue interactively using gh CLI."""
-    subprocess.run(["gh", "issue", "create"])
+def build_repo_arg(host: str, org: str, repo: str) -> str:
+    """
+    Build --repo argument value for gh commands.
+    
+    Since we set GH_HOST in the environment, we always use the simple org/repo format.
+    The GH_HOST environment variable handles routing to the correct GitHub instance.
+    
+    Args:
+        host: GitHub host (e.g., 'github.com' or 'github.enterprise.com')
+        org: Organization/owner name
+        repo: Repository name
+        
+    Returns:
+        str: Formatted repo argument as 'org/repo'
+    """
+    return f"{org}/{repo}"
+
+
+def create_issue(host: str, org: str, repo: str, interactive: bool = True) -> GhResult:
+    """
+    Invoke gh issue create in interactive mode.
+    
+    Args:
+        host: GitHub host
+        org: Organization/owner name
+        repo: Repository name
+        interactive: If True, pass stdin/stdout/stderr to user terminal
+        
+    Returns:
+        GhResult: Result (stdout/stderr will be empty in interactive mode)
+        
+    Raises:
+        GhError: If gh command fails
+    """
+    repo_arg = build_repo_arg(host, org, repo)
+    base_cmd = ["gh", "issue", "create", "--repo", repo_arg]
+    cmd, env = _prepare_gh_cmd(host, base_cmd)
+    
+    if interactive:
+        # Pure passthrough - let gh handle all I/O and print URL directly
+        result = subprocess.run(
+            cmd,
+            stdin=sys.stdin,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            env=env
+        )
+    else:
+        result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    
+    if result.returncode != 0:
+        raise GhError(result.returncode, "")
+    
+    return GhResult(
+        returncode=result.returncode,
+        stdout="",  # Empty in interactive mode
+        stderr=""
+    )
+
 
 def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
     """

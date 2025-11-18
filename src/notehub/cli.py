@@ -40,12 +40,12 @@ def create_parser() -> argparse.ArgumentParser:
 def main(args=None):
     args = sys.argv[1:] if not args else args
     parser = create_parser()
-    parsed = parser.parse_args(args)  # None means use sys.argv[1:]
+    parsed = parser.parse_args(args)
     
     if parsed.command == "add":
-        add.run(parsed)
+        return add.run(parsed)
     elif parsed.command == "show":
-        show.run(parsed)
+        return show.run(parsed)
     elif parsed.command == 'status':
         return status.run(parsed)
 

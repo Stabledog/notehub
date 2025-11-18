@@ -303,18 +303,25 @@ sequenceDiagram
     Ctx->>Ctx: check flags/config/env
     Ctx-->>CLI: context
     CLI->>Add: run(args)
-    Add->>Ctx: context.full_identifier()
-    Ctx-->>Add: "host:org/repo"
-    Add->>GH: create_issue(context, interactive=True)
+    Add->>Ctx: context (via resolve)
+    Add->>GH: create_issue(host, org, repo, interactive=True)
     GH->>GH_CLI: subprocess.run(["gh", "issue", "create", "--repo", ...])
-    GH_CLI->>User: [Interactive prompts for title/body]
-    User-->>GH_CLI: [User input]
-    GH_CLI-->>GH: stdout: issue URL
-    GH-->>Add: GhResult(returncode=0, stdout=...)
-    Add->>User: "Created issue #123: https://..."
-    Add-->>CLI: exit code 0
-    CLI-->>Main: exit code 0
-    Main-->>User: exit code 0
+    
+    alt gh not installed or not authenticated
+        GH_CLI-->>GH: error (returncode != 0)
+        GH->>User: [gh error message on stderr]
+        GH-->>Add: raise GhError
+        Add-->>CLI: exit code != 0
+        CLI-->>User: exit with error code
+    else success
+        GH_CLI->>User: [Interactive prompts for title/body]
+        User-->>GH_CLI: [User input]
+        GH_CLI-->>GH: stdout: issue URL
+        GH-->>Add: GhResult(returncode=0, stdout=...)
+        Add->>User: "Created issue #123: https://..."
+        Add-->>CLI: exit code 0
+        CLI-->>User: exit code 0
+    end
 ```
 
 ### 3.2 `notehub edit <note-ident>` Command Flow
@@ -336,29 +343,38 @@ sequenceDiagram
     Ctx-->>CLI: context
     CLI->>Edit: run(args)
     Edit->>Show: resolve_note_ident(context, "bug")
-    Show->>GH: search_issues(context, "bug in:title")
+    Show->>GH: search_issues(host, org, repo, "bug in:title")
     GH->>GH_CLI: gh search issues ...
-    GH_CLI-->>GH: JSON results
-    GH-->>Show: [{"number": 123, ...}]
-    Show-->>Edit: issue_number = 123
-    Edit->>GH: get_issue(context, 123)
-    GH->>GH_CLI: gh api repos/.../issues/123
-    GH_CLI-->>GH: JSON with body
-    GH-->>Edit: {"body": "original content"}
-    Edit->>Cfg: get_editor()
-    Cfg-->>Edit: "vim"
-    Edit->>Edit: write to temp file
-    Edit->>Editor: subprocess.run(["vim", tmpfile])
-    Editor->>User: [Opens editor]
-    User-->>Editor: [Edits and saves]
-    Editor-->>Edit: exit code 0
-    Edit->>Edit: read modified temp file
-    Edit->>GH: update_issue(context, 123, new_body)
-    GH->>GH_CLI: gh issue edit 123 --body ...
-    GH_CLI-->>GH: success
-    GH-->>Edit: GhResult(returncode=0)
-    Edit->>User: "Updated issue #123"
-    Edit-->>CLI: exit code 0
+    
+    alt gh error
+        GH_CLI-->>GH: error
+        GH->>User: [gh error on stderr]
+        GH-->>Show: raise GhError
+        Show-->>Edit: propagate error
+        Edit-->>CLI: exit code != 0
+    else success
+        GH_CLI-->>GH: JSON results
+        GH-->>Show: [{"number": 123, ...}]
+        Show-->>Edit: issue_number = 123
+        Edit->>GH: get_issue(host, org, repo, 123)
+        GH->>GH_CLI: gh api repos/.../issues/123
+        GH_CLI-->>GH: JSON with body
+        GH-->>Edit: {"body": "original content"}
+        Edit->>Cfg: get_editor()
+        Cfg-->>Edit: "vim"
+        Edit->>Edit: write to temp file
+        Edit->>Editor: subprocess.run(["vim", tmpfile])
+        Editor->>User: [Opens editor]
+        User-->>Editor: [Edits and saves]
+        Editor-->>Edit: exit code 0
+        Edit->>Edit: read modified temp file
+        Edit->>GH: update_issue(host, org, repo, 123, new_body)
+        GH->>GH_CLI: gh issue edit 123 --body ...
+        GH_CLI-->>GH: success
+        GH-->>Edit: GhResult(returncode=0)
+        Edit->>User: "Updated issue #123"
+        Edit-->>CLI: exit code 0
+    end
 ```
 
 ### 3.3 `notehub find <regex>` Command Flow
@@ -403,8 +419,42 @@ sequenceDiagram
 4. **I/O Modes**: Support both interactive (passthrough) and programmatic (JSON) modes
 5. **Error Transparency**: Pass through `gh` stderr to user; check return codes
 6. **Authentication**: Rely entirely on `gh auth` status
+7. **Fail-Fast Execution**: Commands trust their dependencies and let errors surface naturally
 
-### 4.2 Interaction Modes
+### 4.2 Error Handling Philosophy
+
+**Commands do NOT check prerequisites**:
+- No `check_gh_installed()` calls
+- No `check_gh_auth()` calls
+- No validation of context before execution
+
+**Rationale**:
+1. **Single Responsibility**: Commands focus on their core task
+2. **User Agency**: User can run `notehub status` to validate setup
+3. **Natural Errors**: `gh` errors are clear and actionable
+4. **Performance**: Skip redundant checks on every invocation
+5. **UNIX Philosophy**: Programs fail with meaningful error messages when dependencies missing
+
+**Error Flow**:
+```
+Command → gh_wrapper → gh CLI → {success | error}
+                                      ↓
+                                User sees gh's error message
+```
+
+**Examples of natural errors**:
+- `gh` not installed → `sh: gh: command not found`
+- Not authenticated → `gh: To use GitHub CLI, run 'gh auth login'`
+- Invalid repo → `gh: repository not found`
+- Network error → `gh: failed to connect to github.com`
+
+**The `status` command is the exception**:
+- Explicitly checks `gh` installation
+- Explicitly checks authentication
+- Displays helpful setup instructions
+- Purpose: help user diagnose environment issues
+
+### 4.3 Interaction Modes
 
 #### Interactive Mode (for `add`, `edit`)
 ```python
@@ -452,46 +502,6 @@ modified = edit_in_editor(issue_json["body"])
 gh_issue_edit(num, body=modified)
 ```
 
-### 4.3 Argument Construction
-
-#### Repository Specification
-```python
-def build_repo_arg(host: str, org: str, repo: str) -> str:
-    """Build --repo argument value."""
-    if host == "github.com":
-        return f"{org}/{repo}"
-    else:
-        return f"{host}:{org}/{repo}"
-
-# Usage (from command layer):
-context = StoreContext.resolve(args)
-repo_arg = build_repo_arg(context.host, context.org, context.repo)
-["gh", "issue", "list", "--repo", repo_arg]
-```
-
-#### Common Patterns
-```python
-# Base command construction
-def build_gh_command(
-    operation: str,          # "issue", "api", "search"
-    subcommand: str,         # "create", "list", "repos/..."
-    host: str,
-    org: str,
-    repo: str,
-    extra_args: list[str] = None
-) -> list[str]:
-    """Build gh command with repo context."""
-    cmd = ["gh", operation, subcommand]
-    
-    if operation in ["issue", "pr"]:
-        cmd.extend(["--repo", build_repo_arg(host, org, repo)])
-    
-    if extra_args:
-        cmd.extend(extra_args)
-    
-    return cmd
-```
-
 ### 4.4 Error Handling Strategy
 
 ```python
@@ -510,7 +520,7 @@ def run_gh(cmd: list[str], capture: bool = True) -> GhResult:
     
     if result.returncode != 0:
         if capture:
-            # stderr was captured, show it
+            # stderr was captured, show it to user
             print(result.stderr, file=sys.stderr)
         raise GhError(result.returncode, result.stderr if capture else "")
     
@@ -519,60 +529,56 @@ def run_gh(cmd: list[str], capture: bool = True) -> GhResult:
         stdout=result.stdout if capture else "",
         stderr=result.stderr if capture else ""
     )
+
+# Commands use this pattern - no pre-checks needed:
+def run(args: Namespace) -> int:
+    """Execute command - let gh errors surface naturally."""
+    context = StoreContext.resolve(args)
+    
+    try:
+        result = create_issue(context.host, context.org, context.repo)
+        print(f"Created issue: {extract_url(result.stdout)}")
+        return 0
+    except GhError as e:
+        # gh's error message already printed to stderr
+        return e.returncode
 ```
 
-### 4.5 Authentication Check
+### 4.5 Authentication Check (Status Command Only)
 
 ```python
 def check_gh_auth(host: str = "github.com") -> bool:
-    """Verify gh is authenticated for host."""
+    """Verify gh is authenticated for host. Used ONLY by status command."""
     result = subprocess.run(
         ["gh", "auth", "status", "--hostname", host],
         capture_output=True
     )
     return result.returncode == 0
 
-# Used in status command:
+def check_gh_installed() -> bool:
+    """Check if gh CLI is available. Used ONLY by status command."""
+    result = subprocess.run(
+        ["which", "gh"],
+        capture_output=True
+    )
+    return result.returncode == 0
+
+# Only status command uses these checks:
 def run(args):
     context = StoreContext.resolve(args)
+    
+    if not check_gh_installed():
+        print("✗ gh CLI not found")
+        print("  Install from https://cli.github.com/")
+        return 0  # Status is informational, always returns 0
+    
     if check_gh_auth(context.host):
         print(f"✓ Authenticated to {context.host}")
     else:
         print(f"✗ Not authenticated. Run: gh auth login --hostname {context.host}")
+    
+    return 0
 ```
-
-### 4.6 JSON vs. Interactive Decision Tree
-
-```mermaid
-graph TD
-    Start[Command Invocation] --> Question{Needs User Input?}
-    Question -->|Yes| Interactive[Interactive Mode]
-    Question -->|No| NeedParse{Need to Parse Output?}
-    
-    Interactive --> PassThrough[Pass stdin/stdout/stderr]
-    PassThrough --> Done
-    
-    NeedParse -->|Yes| JSON[Request JSON Output]
-    NeedParse -->|No| PlainText[Capture Plain Text]
-    
-    JSON --> Parse[Parse JSON in Python]
-    PlainText --> Simple[Simple String Processing]
-    
-    Parse --> Done[Return to Command]
-    Simple --> Done
-    
-    style Interactive fill:#ffe1e1
-    style JSON fill:#e1ffe1
-    style PlainText fill:#fff5e1
-```
-
-**Examples**:
-- `add`: Interactive (user input needed)
-- `list`: JSON (need structured data)
-- `show`: JSON (need issue details)
-- `find`: JSON (need to search bodies)
-- `edit`: Hybrid (JSON fetch → local edit → programmatic update)
-- `status`: Plain text (just need exit code and simple output)
 
 ---
 
@@ -583,43 +589,31 @@ graph TD
 - **API Stability**: GitHub maintains `gh` compatibility
 - **Enterprise Support**: GHES support built into `gh`
 - **Maintenance**: No need to track API changes
+- **Error Messages**: `gh` provides clear, actionable error messages
 
-### 5.2 Why Context Resolution Layer?
-- **Flexibility**: Work in repo, global, or cross-repo contexts
-- **Sensible Defaults**: Minimize flags for common cases
-- **Consistency**: Same resolution logic across all commands
+### 5.2 Why No Prerequisite Checks in Commands?
+- **Separation of Concerns**: `status` command is the diagnostic tool
+- **Reduced Complexity**: Commands focus on their single responsibility
+- **Better Performance**: No redundant validation on every invocation
+- **Natural Error Flow**: `gh` errors are self-explanatory
+- **User Experience**: If `gh` not installed, any command will fail immediately with clear message
+- **Developer Experience**: Simpler command implementations, easier to maintain
 
-### 5.3 Why Thin Command Modules?
-- **Single Responsibility**: Each command file does one thing
-- **Testability**: Easy to test individual commands
-- **Maintainability**: Easy to add/modify commands
+### 5.3 When Should Commands Validate?
+**Never check**:
+- ✗ `gh` installation
+- ✗ Authentication status
+- ✗ Network connectivity
+- ✗ Repository existence
 
-### 5.4 Future Extension Points
-- **Configuration**: Extend `config.py` for per-repo settings
-- **Filtering**: Add issue filtering logic in v2 (labels, milestones)
+**Do check** (minimal validation):
+- ✓ Required arguments present (argparse handles this)
+- ✓ Issue number is valid integer when needed
+- ✓ File paths exist when required (e.g., for `edit`)
 
-### 5.5 Layering and Dependencies
-
-**Three-tier architecture:**
-
-1. **Infrastructure Layer** (`gh_wrapper.py`, `config.py`)
-   - No dependencies on domain models
-   - Works with primitive types (strings, ints, dicts)
-   - Reusable across different contexts
-
-2. **Domain Layer** (`context.py`)
-   - Encapsulates business logic (context resolution)
-   - Uses infrastructure layer for git config
-   - No knowledge of commands
-
-3. **Application Layer** (`commands/*.py`, `cli.py`)
-   - Orchestrates domain and infrastructure
-   - Extracts primitives from domain objects before calling infrastructure
-   - Handles user interaction and output formatting
-
-**Rationale:**
-- Prevents circular dependencies
-- Makes testing easier (can test `gh_wrapper` without mocking `StoreContext`)
-- Follows Dependency Inversion Principle (depend on abstractions, not concretions)
-- Infrastructure is "plug and play" - could swap `gh` for direct API calls without changing domain
+**The `status` command is special**:
+- Purpose: diagnose environment and configuration
+- Checks `gh` installation, authentication, user identity
+- Provides setup instructions
+- Always returns 0 (informational, not transactional)
 
