@@ -1,4 +1,4 @@
-# notehub — CLI-first GitHub/GHES note & issue manager (Draft 0.3)
+# notehub — CLI-first GitHub/GHES note & issue manager (Draft 0.4)
 
 A thin, opinionated wrapper over `gh` for fast note-taking using Github issues for backing store.  Shell + Python 3.11+. Context-aware (repo vs global).  
 
@@ -40,10 +40,10 @@ A thin, opinionated wrapper over `gh` for fast note-taking using Github issues f
         - notehub.$USER ($USER being the user's shell environment value)
     
     - Repo: 
-        - --repo|-r [name] is top choice
-            - If name is '.', it will be parsed from the local git remote spec
-        - git config custom key 'notehub.repo' ( skip if -g|--global)
+        - -r|--repo flag (with special handling for '.')
+        - parsed from local git remote spec if in working copy unless -g|--global
         - Env 'NotehubRepo' 
+        - git config custom key 'notehub.repo' ( skip if -g|--global)
         - git config (global) key 'notehub.repo' 
         - 'notehub.default' (literal repo name) 
 

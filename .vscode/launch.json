@@ -43,6 +43,17 @@
             "stopOnEntry": false
         },
         {
+            "name": "notehub status ~/dotfiles",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "notehub",
+            "args": [
+                "status",
+            ],
+            "cwd": "${env:HOME}/dotfiles",
+            "stopOnEntry": false
+        },
+        {
             "name": "notehub add (bare)",
             "type": "debugpy",
             "request": "launch",

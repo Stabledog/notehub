@@ -27,16 +27,6 @@ class StoreContext:
         """
         Resolve context from args, config, env, defaults.
         
-        Resolution order per spec:
-        - Repo: --repo > git config notehub.repo (local unless --global) > 
-                env NotehubRepo > git config --global notehub.repo > 
-                'notehub.default'
-        - Org: --org > auto-detect from git remote (unless --global) > 
-               env NotehubOrg > git config --global notehub.org > 
-               $USER
-        - Host: --host > auto-detect from git remote (unless --global) > 
-                git config --global notehub.host > 'github.com'
-        
         Args:
             args: Parsed command-line arguments
             
@@ -114,33 +104,38 @@ class StoreContext:
         # 1. --repo flag (special handling for '.' = auto-detect)
         if hasattr(args, 'repo') and args.repo:
             if args.repo == '.':
-                # Special case: '.' means auto-detect from git remote
-                if not global_only:
-                    remote_repo = cls._get_git_remote_repo()
-                    if remote_repo:
-                        return remote_repo
-                # Fall through if can't auto-detect or --global is set
+                # Try to auto-detect from git remote
+                remote_repo = cls._get_git_remote_repo()
+                if remote_repo:
+                    return remote_repo
+                # If auto-detect fails, fall through to other methods
             else:
-                # Normal case: explicit repo name provided
+                # Explicit repo name provided
                 return args.repo
         
-        # 2. git config notehub.repo (local unless --global)
+        # 2. Auto-detect from git remote (unless --global)
         if not global_only:
-            local_repo = cls._get_git_config('notehub.repo', global_only=False)
-            if local_repo:
-                return local_repo
+            remote_repo = cls._get_git_remote_repo()
+            if remote_repo:
+                return remote_repo
         
         # 3. Environment variable NotehubRepo
         env_repo = os.environ.get('NotehubRepo')
         if env_repo:
             return env_repo
         
-        # 4. git config --global notehub.repo
+        # 4. git config notehub.repo (local unless --global)
+        if not global_only:
+            local_repo = cls._get_git_config('notehub.repo', global_only=False)
+            if local_repo:
+                return local_repo
+        
+        # 5. git config --global notehub.repo
         global_repo = cls._get_git_config('notehub.repo', global_only=True)
         if global_repo:
             return global_repo
         
-        # 5. Default to 'notehub.default'
+        # 6. Default to 'notehub.default'
         return 'notehub.default'
     
     @staticmethod
