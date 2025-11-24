@@ -9,8 +9,7 @@ description = "A note-taking tool integrated with GitHub issues"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    "PyGithub",
-    "pyyaml",
+    "requests>=2.32.3",
 ]
 
 [project.scripts]
