@@ -54,6 +54,18 @@
             "stopOnEntry": false
         },
         {
+            "name": "notehub edit 4",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "notehub",
+            "args": [
+                "edit",
+                "4"
+            ],
+            "cwd": "${env:HOME}",
+            "stopOnEntry": false
+        },
+        {
             "name": "notehub add (bare)",
             "type": "debugpy",
             "request": "launch",

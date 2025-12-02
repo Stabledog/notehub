@@ -17,4 +17,5 @@ c:\Projects\notehub> python -m pip install -e .
 - Don't listen to LLMs that say to use --user.  On Windows, --user puts stuff in AppData\Roaming
 - instead of AppData\Local, but since you do actually own the latter no reason to use --user
 ```
+- Use GH_ENTERPRISE_TOKEN_2 env within the corp wall, put in the Windows env.
 
