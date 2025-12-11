@@ -26,7 +26,7 @@
             "args": [
                 "status"
             ],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${env:HOME}",
             "stopOnEntry": false
         },
         {
