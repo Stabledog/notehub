@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 import os
+import shutil
 from typing import Optional
 from dataclasses import dataclass
 
@@ -284,11 +285,7 @@ def check_gh_installed() -> bool:
     Returns:
         bool: True if gh is found, False otherwise
     """
-    result = subprocess.run(
-        ["which", "gh"],
-        capture_output=True
-    )
-    return result.returncode == 0
+    return shutil.which("gh") is not None
 
 
 def ensure_label_exists(host: str, org: str, repo: str, label_name: str, color: str, description: str = "") -> bool:
