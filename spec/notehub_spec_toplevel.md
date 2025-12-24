@@ -15,7 +15,7 @@ A thin, opinionated wrapper over `gh` for fast note-taking using Github issues f
 - **Optional**: `fzf` for interactive pickers; 
 
 ## Glossary
-
+j
 - "note-issue":  
     - we're using github issues as notes, but this term removes ambiguity: "an issue which is being treated as a note"
     - implies that there may be only a subset of issues which are "note-issues" (filter criteria TBD version 2, v1 will not filter at all)

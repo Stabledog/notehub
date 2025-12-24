@@ -12,6 +12,28 @@ from ..gh_wrapper import GhError, get_issue, update_issue
 from ..utils import resolve_note_ident
 
 
+def _prepare_editor_command(editor: str) -> list[str]:
+    """
+    Prepare editor command, adding -w flag for VS Code if needed.
+    
+    VS Code requires the -w flag to wait for the file to be closed before
+    continuing, otherwise the script will immediately proceed without user input.
+    
+    Args:
+        editor: Editor command (e.g., 'vim', 'code')
+        
+    Returns:
+        List of command arguments
+    """
+    # Check if editor is VS Code (code, code.cmd, code.exe, or path containing 'code')
+    if editor and 'code' in os.path.basename(editor).lower():
+        # Add -w flag if not already present
+        if '-w' not in editor and '--wait' not in editor:
+            return [editor, '-w']
+    
+    return [editor]
+
+
 def edit_in_temp_file(content: str, editor: str) -> str | None:
     """
     Open content in temporary file using editor.
@@ -32,8 +54,22 @@ def edit_in_temp_file(content: str, editor: str) -> str | None:
         # Get original modification time
         original_mtime = os.path.getmtime(tmp_path)
         
+        # Prepare editor command (add -w for VS Code)
+        editor_cmd = _prepare_editor_command(editor)
+        
+        # Print helpful message for VS Code users
+        if len(editor_cmd) > 1 and editor_cmd[1] == '-w':
+            print("Opening in VS Code... Close the editor tab when done to continue.")
+        
         # Open in editor
-        result = subprocess.run([editor, tmp_path])
+        try:
+            result = subprocess.run([*editor_cmd, tmp_path], shell=True)
+        except FileNotFoundError:
+            if sys.platform == 'win32':
+                print(f"Error: Editor '{editor}' not found. On Windows, try adding .exe to the EDITOR setting (e.g. 'vi.exe').", file=sys.stderr)
+            else:
+                print(f"Error: Editor '{editor}' not found. Please check your EDITOR environment variable or configuration.", file=sys.stderr)
+            return None
         
         # Check if editor failed
         if result.returncode != 0:
