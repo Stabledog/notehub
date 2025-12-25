@@ -83,7 +83,7 @@ def edit_in_temp_file(content: str, editor: str) -> str | None:
         if editor_cmd is None:
             print(f"Error: Editor '{editor}' not found in PATH.", file=sys.stderr)
             if sys.platform == 'win32':
-                print("On Windows, common editors: 'code', 'notepad', 'vim'", file=sys.stderr)
+                print("On Windows, common editors: 'code', 'notepad', 'vim' (try with .exe extension)", file=sys.stderr)
             return None
         
         # Print helpful message for VS Code users
@@ -91,7 +91,11 @@ def edit_in_temp_file(content: str, editor: str) -> str | None:
             print("Opening in VS Code... Close the editor tab when done to continue.")
         
         # Open in editor (shell=False to avoid quoting issues on Windows)
-        result = subprocess.run([*editor_cmd, tmp_path], shell=False)
+        try:
+            result = subprocess.run([*editor_cmd, tmp_path], shell=False)
+        except (FileNotFoundError, OSError) as e:
+            print(f"Error: Failed to run editor: {e}", file=sys.stderr)
+            return None
         
         # Check if editor failed
         if result.returncode != 0:
