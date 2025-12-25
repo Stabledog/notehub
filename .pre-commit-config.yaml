@@ -1,0 +1,30 @@
+# Pre-commit hooks for notehub
+# See https://pre-commit.com for more information
+
+repos:
+  # Basic file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+
+  # Run unit tests with pytest
+  - repo: local
+    hooks:
+      - id: pytest-unit-tests
+        name: Run unit tests (pytest)
+        entry: pytest
+        args:
+          - tests/unit/
+          - --cov=src/notehub
+          - --cov-report=term-missing:skip-covered
+          - --cov-fail-under=20
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
