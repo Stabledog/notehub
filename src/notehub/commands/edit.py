@@ -1,6 +1,8 @@
 """Edit command - edit note-issue body in $EDITOR."""
 
 import os
+import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -12,26 +14,46 @@ from ..gh_wrapper import GhError, get_issue, update_issue
 from ..utils import resolve_note_ident
 
 
-def _prepare_editor_command(editor: str) -> list[str]:
+def _prepare_editor_command(editor: str) -> list[str] | None:
     """
-    Prepare editor command, adding -w flag for VS Code if needed.
+    Prepare editor command, adding --wait flag for VS Code if needed.
     
-    VS Code requires the -w flag to wait for the file to be closed before
+    VS Code requires the --wait flag to wait for the file to be closed before
     continuing, otherwise the script will immediately proceed without user input.
     
+    On Windows, automatically searches for .exe or .cmd versions of executables
+    if the base command is not found in PATH.
+    
     Args:
-        editor: Editor command (e.g., 'vim', 'code')
+        editor: Editor command (e.g., 'vim', 'code', 'code --wait')
         
     Returns:
-        List of command arguments
+        List of command arguments, or None if editor executable not found
     """
-    # Check if editor is VS Code (code, code.cmd, code.exe, or path containing 'code')
-    if editor and 'code' in os.path.basename(editor).lower():
-        # Add -w flag if not already present
-        if '-w' not in editor and '--wait' not in editor:
-            return [editor, '-w']
+    # Split editor command into parts (handles both 'code' and 'code --wait')
+    editor_parts = shlex.split(editor)
+    if not editor_parts:
+        return None
     
-    return [editor]
+    # Find the actual executable in PATH
+    editor_exe = editor_parts[0]
+    
+    # If it's not an absolute path, search PATH for the executable
+    if not os.path.isabs(editor_exe):
+        found_exe = shutil.which(editor_exe)
+        if found_exe:
+            editor_parts[0] = found_exe
+        else:
+            # Not found - return None to signal error
+            return None
+    
+    # Check if editor is VS Code (code, code.cmd, code.exe, or path containing 'code')
+    if 'code' in os.path.basename(editor_parts[0]).lower():
+        # Add --wait flag if not already present
+        if '--wait' not in editor_parts and '-w' not in editor_parts:
+            editor_parts.append('--wait')
+    
+    return editor_parts
 
 
 def edit_in_temp_file(content: str, editor: str) -> str | None:
@@ -54,22 +76,22 @@ def edit_in_temp_file(content: str, editor: str) -> str | None:
         # Get original modification time
         original_mtime = os.path.getmtime(tmp_path)
         
-        # Prepare editor command (add -w for VS Code)
+        # Prepare editor command (add --wait for VS Code if needed)
         editor_cmd = _prepare_editor_command(editor)
         
+        # Check if editor was found
+        if editor_cmd is None:
+            print(f"Error: Editor '{editor}' not found in PATH.", file=sys.stderr)
+            if sys.platform == 'win32':
+                print("On Windows, common editors: 'code', 'notepad', 'vim'", file=sys.stderr)
+            return None
+        
         # Print helpful message for VS Code users
-        if len(editor_cmd) > 1 and editor_cmd[1] == '-w':
+        if '--wait' in editor_cmd or '-w' in editor_cmd:
             print("Opening in VS Code... Close the editor tab when done to continue.")
         
-        # Open in editor
-        try:
-            result = subprocess.run([*editor_cmd, tmp_path], shell=True)
-        except FileNotFoundError:
-            if sys.platform == 'win32':
-                print(f"Error: Editor '{editor}' not found. On Windows, try adding .exe to the EDITOR setting (e.g. 'vi.exe').", file=sys.stderr)
-            else:
-                print(f"Error: Editor '{editor}' not found. Please check your EDITOR environment variable or configuration.", file=sys.stderr)
-            return None
+        # Open in editor (shell=False to avoid quoting issues on Windows)
+        result = subprocess.run([*editor_cmd, tmp_path], shell=False)
         
         # Check if editor failed
         if result.returncode != 0:

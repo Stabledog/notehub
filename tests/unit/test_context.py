@@ -263,3 +263,308 @@ class TestGitRemoteParsing:
         context = StoreContext.resolve(args)
 
         assert context.repo == expected_repo
+
+
+class TestExpandGitUrl:
+    """Tests for _expand_git_url method."""
+
+    def test_expand_url_with_insteadof_rule(self, mocker):
+        """Should expand URL using git insteadOf rules."""
+        # Mock git config to return insteadOf rule
+        mock_result = mocker.Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = 'url.https://github.example.com/.insteadof gh:'
+        mocker.patch('subprocess.run', return_value=mock_result)
+
+        result = StoreContext._expand_git_url('gh:org/repo.git')
+
+        assert result == 'https://github.example.com/org/repo.git'
+
+    def test_expand_url_multiple_insteadof_rules(self, mocker):
+        """Should handle multiple insteadOf rules."""
+        # Mock git config with multiple rules
+        mock_result = mocker.Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = '''url.https://github.com/.insteadof gh:
+url.https://gitlab.com/.insteadof gl:
+url.https://enterprise.github.com/.insteadof work:'''
+        mocker.patch('subprocess.run', return_value=mock_result)
+
+        result = StoreContext._expand_git_url('work:company/project.git')
+
+        assert result == 'https://enterprise.github.com/company/project.git'
+
+    def test_expand_url_ssh_short_form_with_ssh_config(self, mocker):
+        """Should expand SSH short form using SSH config."""
+        # First call: git config (no insteadOf)
+        mock_git_result = mocker.Mock()
+        mock_git_result.returncode = 1
+        mock_git_result.stdout = ''
+
+        # Second call: ssh -G to resolve alias
+        mock_ssh_result = mocker.Mock()
+        mock_ssh_result.returncode = 0
+        mock_ssh_result.stdout = 'hostname github.enterprise.com\nport 22'
+
+        mocker.patch('subprocess.run', side_effect=[mock_git_result, mock_ssh_result])
+
+        result = StoreContext._expand_git_url('bbgithub:org/repo.git')
+
+        assert result == 'git@github.enterprise.com:org/repo.git'
+
+    def test_expand_url_no_matching_rules(self, mocker):
+        """Should return URL unchanged when no rules match."""
+        mock_result = mocker.Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = 'url.https://github.com/.insteadof gh:'
+        mocker.patch('subprocess.run', return_value=mock_result)
+
+        url = 'git@github.com:org/repo.git'
+        result = StoreContext._expand_git_url(url)
+
+        assert result == url
+
+    def test_expand_url_git_not_installed(self, mocker):
+        """Should handle git not being installed."""
+        mocker.patch('subprocess.run', side_effect=FileNotFoundError())
+
+        url = 'git@github.com:org/repo.git'
+        result = StoreContext._expand_git_url(url)
+
+        assert result == url
+
+    def test_expand_url_empty_insteadof_output(self, mocker):
+        """Should handle empty git config output."""
+        mock_result = mocker.Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = ''
+        mocker.patch('subprocess.run', return_value=mock_result)
+
+        url = 'gh:org/repo.git'
+        result = StoreContext._expand_git_url(url)
+
+        assert result == url
+
+
+class TestExpandSshHost:
+    """Tests for _expand_ssh_host method."""
+
+    def test_resolve_ssh_alias(self, mocker):
+        """Should resolve SSH host alias using ssh -G."""
+        mock_result = mocker.Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = '''user git
+hostname github.enterprise.com
+port 22
+identityfile ~/.ssh/id_rsa'''
+        mocker.patch('subprocess.run', return_value=mock_result)
+
+        result = StoreContext._expand_ssh_host('bbgithub')
+
+        assert result == 'github.enterprise.com'
+
+    def test_resolve_ssh_alias_not_found(self, mocker):
+        """Should return None when SSH alias not found."""
+        mock_result = mocker.Mock()
+        mock_result.returncode = 1
+        mock_result.stdout = ''
+        mocker.patch('subprocess.run', return_value=mock_result)
+
+        result = StoreContext._expand_ssh_host('nonexistent')
+
+        assert result is None
+
+    def test_resolve_ssh_no_hostname_line(self, mocker):
+        """Should return None when ssh -G output lacks hostname."""
+        mock_result = mocker.Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = 'port 22\nuser git'
+        mocker.patch('subprocess.run', return_value=mock_result)
+
+        result = StoreContext._expand_ssh_host('alias')
+
+        assert result is None
+
+    def test_resolve_ssh_command_not_found(self, mocker):
+        """Should handle ssh command not being installed."""
+        mocker.patch('subprocess.run', side_effect=FileNotFoundError())
+
+        result = StoreContext._expand_ssh_host('alias')
+
+        assert result is None
+
+
+class TestGlobalFlag:
+    """Tests for --global flag behavior."""
+
+    def test_global_flag_skips_local_git_detection(self, mocker):
+        """Should skip git remote detection with --global flag."""
+        args = Namespace(host=None, org=None, repo=None, global_scope=True)
+        mocker.patch.dict('os.environ', {'USER': 'testuser'}, clear=True)
+
+        # Mock subprocess to track calls
+        mock_calls = []
+
+        def track_subprocess_call(cmd, **kwargs):
+            mock_calls.append(cmd)
+            result = mocker.Mock()
+            result.returncode = 1
+            result.stdout = ''
+            return result
+
+        mocker.patch('subprocess.run', side_effect=track_subprocess_call)
+
+        context = StoreContext.resolve(args)
+
+        # Should use defaults since git remote detection is skipped
+        assert context.host == 'github.com'
+        assert context.org == 'testuser'
+        assert context.repo == 'notehub.default'
+
+        # Verify git remote commands were not called
+        git_remote_calls = [call for call in mock_calls if 'remote' in ' '.join(call)]
+        assert len(git_remote_calls) == 0
+
+    def test_global_flag_uses_global_git_config(self, mocker):
+        """Should use global git config values with --global flag."""
+        args = Namespace(host=None, org=None, repo=None, global_scope=True)
+        mocker.patch.dict('os.environ', {}, clear=True)
+
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            result.returncode = 0
+
+            # Only respond to --global config requests
+            if 'config' in cmd and '--global' in cmd:
+                if 'notehub.host' in cmd:
+                    result.stdout = 'enterprise.github.com'
+                elif 'notehub.org' in cmd:
+                    result.stdout = 'globalorg'
+                elif 'notehub.repo' in cmd:
+                    result.stdout = 'globalrepo'
+                else:
+                    result.returncode = 1
+                    result.stdout = ''
+            else:
+                result.returncode = 1
+                result.stdout = ''
+
+            return result
+
+        mocker.patch('subprocess.run', side_effect=mock_git_call)
+
+        context = StoreContext.resolve(args)
+
+        assert context.host == 'enterprise.github.com'
+        assert context.org == 'globalorg'
+        assert context.repo == 'globalrepo'
+
+    def test_global_vs_local_git_config_priority(self, mocker):
+        """Should prefer local config over global when --global not set."""
+        args = Namespace(host=None, org=None, repo=None)
+        mocker.patch.dict('os.environ', {}, clear=True)
+
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            result.returncode = 0
+
+            # Simulate both local and global configs being set
+            if 'config' in cmd:
+                if '--global' in cmd:
+                    # Global config values
+                    if 'notehub.repo' in cmd:
+                        result.stdout = 'globalrepo'
+                    else:
+                        result.returncode = 1
+                        result.stdout = ''
+                elif 'notehub.repo' in cmd:
+                    # Local config value (checked first for repo)
+                    result.stdout = 'localrepo'
+                else:
+                    result.returncode = 1
+                    result.stdout = ''
+            elif 'remote' in cmd:
+                result.returncode = 1
+                result.stdout = ''
+            else:
+                result.returncode = 1
+                result.stdout = ''
+
+            return result
+
+        mocker.patch('subprocess.run', side_effect=mock_git_call)
+
+        context = StoreContext.resolve(args)
+
+        # Should use local repo config
+        assert context.repo == 'localrepo'
+
+
+class TestMalformedUrls:
+    """Tests for malformed URL handling."""
+
+    def test_https_url_without_org(self, mocker):
+        """Should extract what it can from malformed HTTPS URL."""
+        args = Namespace(host=None, org=None, repo=None)
+        mocker.patch.dict('os.environ', {'USER': 'testuser'}, clear=True)
+
+        mock_result = mocker.Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = 'https://github.com/'  # Missing org/repo
+        mocker.patch('subprocess.run', return_value=mock_result)
+
+        context = StoreContext.resolve(args)
+
+        # Host is extracted, but org parsing returns the malformed URL
+        assert context.host == 'github.com'
+        # Current behavior: returns empty string from path_parts[0]
+        # This is an edge case - malformed URLs aren't handled perfectly
+
+    def test_ssh_url_without_colon(self, mocker):
+        """Should handle SSH-style URL missing colon."""
+        args = Namespace(host=None, org=None, repo=None)
+        mocker.patch.dict('os.environ', {'USER': 'testuser'}, clear=True)
+
+        mock_result = mocker.Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = 'git@github.com'  # Missing :org/repo
+        mocker.patch('subprocess.run', return_value=mock_result)
+
+        context = StoreContext.resolve(args)
+
+        # Host is extracted, org parsing returns malformed URL as-is
+        assert context.host == 'github.com'
+        # Current behavior: URL without colon fails to parse org
+
+    def test_url_with_unusual_characters(self, mocker):
+        """Should handle URLs with dashes and underscores."""
+        args = Namespace(host=None, org=None, repo=None)
+        mocker.patch.dict('os.environ', {}, clear=True)
+
+        mock_result = mocker.Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = 'git@github-enterprise.my-company.com:my_org/my-repo_v2.git'
+        mocker.patch('subprocess.run', return_value=mock_result)
+
+        context = StoreContext.resolve(args)
+
+        assert context.host == 'github-enterprise.my-company.com'
+        assert context.org == 'my_org'
+        assert context.repo == 'my-repo_v2'
+
+    def test_empty_git_remote_output(self, mocker):
+        """Should handle empty git remote output."""
+        args = Namespace(host=None, org=None, repo=None)
+        mocker.patch.dict('os.environ', {'USER': 'testuser'}, clear=True)
+
+        mock_result = mocker.Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = ''  # Empty output
+        mocker.patch('subprocess.run', return_value=mock_result)
+
+        context = StoreContext.resolve(args)
+
+        # Should use defaults
+        assert context.host == 'github.com'
+        assert context.org == 'testuser'
+        assert context.repo == 'notehub.default'
