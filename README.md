@@ -182,6 +182,22 @@ Run with coverage report:
 pytest --cov=src/notehub --cov-report=term-missing
 ```
 
+### 6. Publishing to PyPI (Maintainers Only)
+
+To publish a new version to PyPI, you need a PyPI API token. Set it as an environment variable:
+
+**Windows (PowerShell):**
+```powershell
+[System.Environment]::SetEnvironmentVariable('LM_NOTEHUB_PYPI_TOKEN', 'your_pypi_token_here', 'User')
+```
+
+Restart your terminal, then run the publish script:
+```bash
+bash build-and-publish.sh
+```
+
+This will build the distribution and upload it to PyPI.
+
 ## Usage
 
 After installation, the `notehub` command will be available:

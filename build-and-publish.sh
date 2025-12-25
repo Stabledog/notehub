@@ -9,6 +9,31 @@ if [ -z "$LM_NOTEHUB_PYPI_TOKEN" ]; then
     exit 1
 fi
 
+# Check for required Python packages
+missing_packages=()
+
+if ! python -c "import build" 2>/dev/null; then
+    missing_packages+=("build")
+fi
+
+if ! python -c "import twine" 2>/dev/null; then
+    missing_packages+=("twine")
+fi
+
+# Prompt to install missing packages
+if [ ${#missing_packages[@]} -gt 0 ]; then
+    echo "Missing required packages: ${missing_packages[*]}"
+    echo -n "Install them now? (y/n): "
+    read -r response
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        echo "Installing ${missing_packages[*]}..."
+        python -m pip install "${missing_packages[@]}"
+    else
+        echo "Cannot proceed without required packages. Exiting."
+        exit 1
+    fi
+fi
+
 echo "Building distribution packages..."
 python -m build
 
