@@ -87,13 +87,15 @@ git config --global notehub.repo notehub.default
 
 **Configure editor (Windows):**
 
-By default, `gh` (and thus `notehub add`) uses `vi` for editing. To use VS Code instead:
+By default, notehub uses `vi` for editing. To use VS Code instead:
 
 ```powershell
-[System.Environment]::SetEnvironmentVariable('GIT_EDITOR', 'code --wait', 'User')
+[System.Environment]::SetEnvironmentVariable('EDITOR', 'code --wait', 'User')
 ```
 
 Restart your terminal after setting this. The `--wait` flag ensures VS Code blocks until you close the editor tab.
+
+This configures the editor for both `notehub add` and `notehub edit` commands.
 
 **Optional: Token environment variables**
 
