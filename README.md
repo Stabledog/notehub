@@ -6,7 +6,114 @@ Using Github issues as general notes.
 
 - Python 3.8 or higher
 - Git
+- GitHub CLI (`gh`) - [Installation instructions](https://cli.github.com/)
 - GitHub personal access token (for API access)
+
+## User Setup
+
+### 1. Install GitHub CLI
+
+Install the GitHub CLI (`gh`) if you haven't already:
+
+**Windows:**
+Download the MSI installer from https://cli.github.com/ (avoid MS Store version - use the official installer)
+
+**macOS:**
+```bash
+brew install gh
+```
+
+**Linux:**
+See https://github.com/cli/cli/blob/trunk/docs/install_linux.md
+
+### 2. Authenticate with GitHub CLI
+
+**For public GitHub:**
+```bash
+gh auth login
+```
+Follow the prompts to authenticate.
+
+**For GitHub Enterprise:**
+```bash
+gh auth login --hostname <your-enterprise-github-hostname>
+```
+
+**Note:** Notehub uses `gh` for all GitHub API authentication. Make sure this step completes successfully.
+
+### 3. Install Notehub
+
+```bash
+pip install lm-notehub
+```
+
+### 4. Create Your Notehub Repository
+
+Create a GitHub repository to store your notes as issues. The recommended name is `notehub.default`:
+
+**For public GitHub:**
+- Go to https://github.com/new
+- Create a repository named `notehub.default`
+- Make it private (recommended for personal notes)
+
+**For GitHub Enterprise:**
+- Go to your enterprise GitHub instance (e.g., https://github.enterprise.com/new)
+- Create a repository named `notehub.default`
+
+### 5. Configure Notehub Settings
+
+Set your default configuration using git config:
+
+**For public GitHub (using default repo name):**
+```bash
+git config --global notehub.host github.com
+git config --global notehub.org <your-github-username>
+git config --global notehub.repo notehub.default
+```
+
+**For GitHub Enterprise:**
+```bash
+git config --global notehub.host <your-enterprise-github-hostname>
+git config --global notehub.org <your-org-or-username>
+git config --global notehub.repo notehub.default
+```
+
+Example for enterprise:
+```bash
+git config --global notehub.host github.enterprise.com
+git config --global notehub.org jsmith
+git config --global notehub.repo notehub.default
+```
+
+**Configure editor (Windows):**
+
+By default, `gh` (and thus `notehub add`) uses `vi` for editing. To use VS Code instead:
+
+```powershell
+[System.Environment]::SetEnvironmentVariable('GIT_EDITOR', 'code --wait', 'User')
+```
+
+Restart your terminal after setting this. The `--wait` flag ensures VS Code blocks until you close the editor tab.
+
+**Optional: Token environment variables**
+
+While `gh auth login` handles authentication, you can also set token environment variables for additional flexibility:
+
+- `GH_ENTERPRISE_TOKEN_2` - Preferred for enterprise
+- `GH_ENTERPRISE_TOKEN` - Alternative for enterprise
+- `GITHUB_TOKEN` - For public GitHub
+
+These are checked in order and used to populate the environment when calling `gh`.
+
+### 6. Verify Setup
+
+Test that notehub can access your repository:
+
+```bash
+notehub status
+```
+
+You should see your configured host/org/repo. You're ready to start using notehub!
 
 ## Development Setup
 
