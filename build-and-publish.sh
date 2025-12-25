@@ -34,6 +34,9 @@ if [ ${#missing_packages[@]} -gt 0 ]; then
     fi
 fi
 
+echo "Cleaning old distribution files..."
+rm -rf dist/
+
 echo "Building distribution packages..."
 python -m build
 
