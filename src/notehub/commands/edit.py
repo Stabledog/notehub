@@ -1,16 +1,16 @@
-"""Edit command - edit note-issue body in $EDITOR."""
+"""Edit command - edit note-issue body in cached git repo."""
 
 import os
 import shlex
 import shutil
 import subprocess
 import sys
-import tempfile
 from argparse import Namespace
 
+from .. import cache
 from ..config import get_editor
 from ..context import StoreContext
-from ..gh_wrapper import GhError, get_issue, update_issue
+from ..gh_wrapper import GhError, get_issue, get_issue_metadata
 from ..utils import resolve_note_ident
 
 
@@ -56,6 +56,157 @@ def _prepare_editor_command(editor: str) -> list[str] | None:
     return editor_parts
 
 
+def _launch_editor_background(editor_cmd: list[str], file_path: str) -> None:
+    """
+    Launch editor without waiting for it to close.
+
+    Args:
+        editor_cmd: Editor command parts (e.g., ['code', '--wait'])
+        file_path: Path to file to edit
+    """
+    # Print helpful message
+    if "--wait" in editor_cmd or "-w" in editor_cmd:
+        print(f"Opening {file_path} in editor...")
+
+    # Launch without waiting (Popen instead of run)
+    try:
+        subprocess.Popen(
+            [*editor_cmd, file_path],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except (FileNotFoundError, OSError) as e:
+        print(f"Warning: Failed to launch editor: {e}", file=sys.stderr)
+        print(f"Edit manually: {file_path}", file=sys.stderr)
+
+
+def _ensure_cache_current(context: StoreContext, cache_path, issue_number: int) -> None:
+    """
+    Ensure cache is synced with GitHub (fetch if stale).
+
+    Args:
+        context: Store context with host/org/repo
+        cache_path: Path to cache directory
+        issue_number: Issue number
+    """
+    # Commit any dirty state first
+    cache.commit_if_dirty(cache_path, "Auto-commit before sync check")
+
+    # Get last known timestamp
+    last_known = cache.get_last_known_updated_at(cache_path)
+
+    # Fetch metadata from GitHub
+    try:
+        metadata = get_issue_metadata(
+            context.host, context.org, context.repo, issue_number
+        )
+    except GhError:
+        # If issue doesn't exist, delete cache
+        print(
+            f"Warning: Issue #{issue_number} no longer exists on GitHub. "
+            f"Removing cache.",
+            file=sys.stderr,
+        )
+        import shutil
+
+        shutil.rmtree(cache_path)
+        raise
+
+    github_updated = metadata.get("updated_at")
+
+    # Check if GitHub is newer
+    if last_known is None or (github_updated and github_updated > last_known):
+        # Fetch full issue and merge
+        print("Fetching updates from GitHub...")
+        issue = get_issue(context.host, context.org, context.repo, issue_number)
+        new_content = issue.get("body") or ""
+
+        cache.merge_from_github(cache_path, new_content, issue_number)
+        cache.set_last_known_updated_at(cache_path, github_updated)
+
+        print(f"Merged changes from GitHub (updated at {github_updated})")
+
+
+def run(args: Namespace) -> int:
+    """
+    Execute edit command.
+
+    Workflow:
+    1. Resolve note-ident to issue number
+    2. Get or create cache directory
+    3. Ensure cache is current (fetch from GitHub if needed)
+    4. Launch editor on note.md (don't wait)
+    5. Print URL and path
+
+    Returns:
+        0 if successful, 1 if error
+    """
+    context = StoreContext.resolve(args)
+
+    try:
+        # Resolve note-ident
+        issue_num, error = resolve_note_ident(context, args.note_ident)
+        if error:
+            print(f"Error: {error}", file=sys.stderr)
+            return 1
+
+        # Get cache path
+        cache_path = cache.get_cache_path(
+            context.host, context.org, context.repo, issue_num
+        )
+
+        # Initialize cache if it doesn't exist
+        if not cache_path.exists():
+            print(f"Creating cache for issue #{issue_num}...")
+            issue = get_issue(context.host, context.org, context.repo, issue_num)
+            content = issue.get("body") or ""
+            updated_at = issue.get("updated_at")
+
+            cache.init_cache(cache_path, issue_num, content)
+
+            # Store initial timestamp if available
+            if updated_at:
+                cache.set_last_known_updated_at(cache_path, updated_at)
+        else:
+            # Ensure cache is up to date
+            _ensure_cache_current(context, cache_path, issue_num)
+
+        # Get editor
+        editor = get_editor()
+        editor_cmd = _prepare_editor_command(editor)
+
+        if editor_cmd is None:
+            print(f"Error: Editor '{editor}' not found in PATH.", file=sys.stderr)
+            if sys.platform == "win32":
+                print(
+                    "On Windows, common editors: 'code', 'notepad', 'vim'",
+                    file=sys.stderr,
+                )
+            return 1
+
+        # Get note path
+        note_path = cache.get_note_path(cache_path)
+
+        # Launch editor (don't wait)
+        _launch_editor_background(editor_cmd, str(note_path))
+
+        # Print info
+        print(f"Editing: {note_path}")
+        print(
+            f"URL: https://{context.host}/{context.org}/{context.repo}/issues/{issue_num}"
+        )
+        print(f"Use 'notehub sync {issue_num}' to push changes to GitHub")
+
+        return 0
+
+    except GhError:
+        # Error already printed to stderr by gh_wrapper
+        return 1
+    except KeyboardInterrupt:
+        print("\nCancelled.", file=sys.stderr)
+        return 1
+
+
 def edit_in_temp_file(content: str, editor: str) -> str | None:
     """
     Open content in temporary file using editor.
@@ -67,6 +218,8 @@ def edit_in_temp_file(content: str, editor: str) -> str | None:
     Returns:
         Modified content if file was changed, None if unchanged or editor failed
     """
+    import tempfile
+
     # Create temp file with .md suffix for syntax highlighting
     with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as tmp:
         tmp.write(content)
@@ -120,62 +273,3 @@ def edit_in_temp_file(content: str, editor: str) -> str | None:
             os.unlink(tmp_path)
         except OSError:
             pass
-
-
-def run(args: Namespace) -> int:
-    """
-    Execute edit command.
-
-    Workflow:
-    1. Resolve note-ident to issue number
-    2. Fetch issue body
-    3. Open in editor
-    4. Detect changes
-    5. Update if modified
-
-    Returns:
-        0 if successful, 1 if error
-    """
-    context = StoreContext.resolve(args)
-
-    try:
-        # Resolve note-ident
-        issue_num, error = resolve_note_ident(context, args.note_ident)
-        if error:
-            print(f"Error: {error}", file=sys.stderr)
-            return 1
-
-        # Fetch current issue
-        issue = get_issue(context.host, context.org, context.repo, issue_num)
-        original_body = issue.get("body") or ""
-
-        # Edit in $EDITOR
-        editor = get_editor()
-        modified_body = edit_in_temp_file(original_body, editor)
-
-        if modified_body is None:
-            print("No changes made.")
-            return 0
-
-        # Handle empty body - confirm with user
-        if not modified_body.strip():
-            try:
-                confirm = input("Warning: Issue body is empty. Update anyway? [y/N] ")
-                if confirm.lower() != "y":
-                    print("Update cancelled.")
-                    return 0
-            except (EOFError, KeyboardInterrupt):
-                print("\nUpdate cancelled.")
-                return 0
-
-        # Update issue
-        update_issue(context.host, context.org, context.repo, issue_num, modified_body)
-        print(f"Updated issue #{issue_num}")
-        return 0
-
-    except GhError:
-        # Error already printed to stderr by gh_wrapper
-        return 1
-    except KeyboardInterrupt:
-        print("\nCancelled.", file=sys.stderr)
-        return 1

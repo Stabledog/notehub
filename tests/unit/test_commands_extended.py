@@ -1,5 +1,6 @@
 """Unit tests for additional notehub command modules (show, list, status) and CLI."""
 
+import io
 from argparse import Namespace
 
 import pytest
@@ -16,6 +17,14 @@ class TestShowRun:
     def test_show_single_issue_success(self, mocker, capsys):
         """Should display single issue successfully."""
         mock_context = mocker.Mock()
+        mock_context.host = "github.com"
+        mock_context.org = "testorg"
+        mock_context.repo = "testrepo"
+
+        mocker.patch(
+            "notehub.commands.show.resolve_note_ident", return_value=(42, None)
+        )
+
         mock_context.host = "github.com"
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
@@ -400,7 +409,6 @@ class TestCLI:
 
         # Parse help to check subcommands exist
         import contextlib
-        import io
 
         f = io.StringIO()
         with contextlib.redirect_stdout(f):

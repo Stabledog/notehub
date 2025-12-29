@@ -238,6 +238,56 @@ def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
     """
     # Use --jq to filter to only the fields we need
     jq_filter = "{number: .number, title: .title, html_url: .html_url, body: .body}"
+    base_cmd = [
+        "gh",
+        "api",
+        f"repos/{org}/{repo}/issues/{issue_number}",
+        "--jq",
+        jq_filter,
+    ]
+
+    cmd, env = _prepare_gh_cmd(host, base_cmd)
+    result = _run_gh_command(cmd, env, host)
+
+    if result.returncode != 0:
+        print(result.stderr, file=sys.stderr)
+        raise GhError(result.returncode, result.stderr)
+
+    if not result.stdout:
+        error_msg = (
+            f"No response from GitHub server at {host}. Check your network connection."
+        )
+        print(error_msg, file=sys.stderr)
+        raise GhError(1, error_msg)
+
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as e:
+        error_msg = f"Invalid response from GitHub server at {host}: {str(e)}"
+        print(error_msg, file=sys.stderr)
+        raise GhError(1, error_msg) from e
+
+
+def get_issue_metadata(host: str, org: str, repo: str, issue_number: int) -> dict:
+    """
+    Fetch issue metadata (updated_at, title) without full body.
+
+    Args:
+        host: GitHub host (e.g., 'github.com')
+        org: Organization or user name
+        repo: Repository name
+        issue_number: Issue number
+
+    Returns:
+        Issue dict with: number, title, html_url, updated_at
+
+    Raises:
+        GhError: If gh command fails
+    """
+    # Fetch only metadata fields
+    jq_filter = (
+        "{number: .number, title: .title, html_url: .html_url, updated_at: .updated_at}"
+    )
 
     base_cmd = [
         "gh",
