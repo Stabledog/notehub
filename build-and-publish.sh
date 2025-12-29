@@ -4,6 +4,57 @@ set -e
 # Build and publish lm-notehub to PyPI
 # Requires: LM_NOTEHUB_PYPI_TOKEN environment variable
 
+show_help() {
+    cat << EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Build and publish lm-notehub to PyPI.
+
+OPTIONS:
+    -h, --help              Show this help message and exit
+    -p, --publish-only      Skip the build step and only publish existing dist/ files
+                           Useful for retrying after a failed publish
+
+ENVIRONMENT:
+    LM_NOTEHUB_PYPI_TOKEN  Required. Your PyPI API token
+
+EXAMPLES:
+    # Normal build and publish
+    ./$(basename "$0")
+
+    # Retry publish after network failure (skips rebuild)
+    ./$(basename "$0") --publish-only
+
+NOTES:
+    Publishing from within a corporate network with Python 3.13 may fail due to
+    SSL certificate validation issues. If you encounter SSL errors, try:
+    - Publishing from outside the corporate network (home/mobile hotspot)
+    - Using Python 3.11 or earlier (more lenient SSL validation)
+
+EOF
+    exit 0
+}
+
+PUBLISH_ONLY=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            ;;
+        -p|--publish-only)
+            PUBLISH_ONLY=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Run '$(basename "$0") --help' for usage information."
+            exit 1
+            ;;
+    esac
+done
+
 if [ -z "$LM_NOTEHUB_PYPI_TOKEN" ]; then
     echo "Error: LM_NOTEHUB_PYPI_TOKEN environment variable not set"
     exit 1
@@ -34,11 +85,20 @@ if [ ${#missing_packages[@]} -gt 0 ]; then
     fi
 fi
 
-echo "Cleaning old distribution files..."
-rm -rf dist/
+if [ "$PUBLISH_ONLY" = false ]; then
+    echo "Cleaning old distribution files..."
+    rm -rf dist/
 
-echo "Building distribution packages..."
-python -m build
+    echo "Building distribution packages..."
+    python -m build
+else
+    echo "Skipping build (publish-only mode)..."
+    if [ ! -d "dist" ] || [ -z "$(ls -A dist 2>/dev/null)" ]; then
+        echo "Error: No distribution files found in dist/ directory"
+        echo "Run without --publish-only to build first"
+        exit 1
+    fi
+fi
 
 echo "Uploading to PyPI..."
 python -m twine upload dist/* -u __token__ -p "$LM_NOTEHUB_PYPI_TOKEN"
