@@ -21,6 +21,7 @@ dev = [
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
     "pre-commit>=3.0.0",
+    "ruff>=0.1.0",
 ]
 
 [tool.setuptools]
@@ -40,3 +41,22 @@ addopts = [
     "--cov=src/notehub",
     "--cov-report=term-missing:skip-covered",
 ]
+
+[tool.ruff]
+target-version = "py38"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
