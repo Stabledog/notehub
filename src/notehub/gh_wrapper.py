@@ -1,14 +1,14 @@
 import json
-import subprocess
-import sys
 import os
 import shutil
-from typing import Optional
+import subprocess
+import sys
 from dataclasses import dataclass
 
 
 class GhError(Exception):
     """gh CLI invocation failed."""
+
     def __init__(self, returncode: int, stderr: str):
         self.returncode = returncode
         self.stderr = stderr
@@ -18,6 +18,7 @@ class GhError(Exception):
 @dataclass
 class GhResult:
     """Result from gh CLI invocation."""
+
     returncode: int
     stdout: str
     stderr: str
@@ -44,25 +45,25 @@ def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
 
     # Token priority: GH_ENTERPRISE_TOKEN_2 > GH_ENTERPRISE_TOKEN > GH_TOKEN
     token = None
-    if 'GH_ENTERPRISE_TOKEN_2' in env:
-        token = env['GH_ENTERPRISE_TOKEN_2']
-    elif 'GH_ENTERPRISE_TOKEN' in env:
-        token = env['GH_ENTERPRISE_TOKEN']
-    elif 'GH_TOKEN' in env:
-        token = env['GH_TOKEN']
+    if "GH_ENTERPRISE_TOKEN_2" in env:
+        token = env["GH_ENTERPRISE_TOKEN_2"]
+    elif "GH_ENTERPRISE_TOKEN" in env:
+        token = env["GH_ENTERPRISE_TOKEN"]
+    elif "GH_TOKEN" in env:
+        token = env["GH_TOKEN"]
 
     # If we found a token, set both GH_TOKEN and GH_ENTERPRISE_TOKEN
     if token:
-        env['GH_TOKEN'] = token
-        env['GH_ENTERPRISE_TOKEN'] = token
+        env["GH_TOKEN"] = token
+        env["GH_ENTERPRISE_TOKEN"] = token
 
     # Set GH_HOST to target the correct GitHub instance
-    env['GH_HOST'] = host
+    env["GH_HOST"] = host
 
     # Set GIT_EDITOR from EDITOR if not already set
     # This allows gh to use the same editor configuration as notehub
-    if 'EDITOR' in env and 'GIT_EDITOR' not in env:
-        env['GIT_EDITOR'] = env['EDITOR']
+    if "EDITOR" in env and "GIT_EDITOR" not in env:
+        env["GIT_EDITOR"] = env["EDITOR"]
 
     # Return command as-is (no --hostname flag needed)
     cmd = base_cmd.copy()
@@ -70,8 +71,15 @@ def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
     return cmd, env
 
 
-def _run_gh_command(cmd: list[str], env: dict, host: str, capture_output: bool = True,
-                    stdin=None, stdout=None, stderr=None) -> subprocess.CompletedProcess:
+def _run_gh_command(
+    cmd: list[str],
+    env: dict,
+    host: str,
+    capture_output: bool = True,
+    stdin=None,
+    stdout=None,
+    stderr=None,
+) -> subprocess.CompletedProcess:
     """
     Execute gh command with robust error handling for network and encoding issues.
 
@@ -96,28 +104,22 @@ def _run_gh_command(cmd: list[str], env: dict, host: str, capture_output: bool =
     try:
         if capture_output:
             result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                env=env,
-                errors='replace'
+                cmd, capture_output=True, text=True, env=env, errors="replace"
             )
         else:
             result = subprocess.run(
-                cmd,
-                stdin=stdin,
-                stdout=stdout,
-                stderr=stderr,
-                env=env
+                cmd, stdin=stdin, stdout=stdout, stderr=stderr, env=env
             )
         return result
 
     except (UnicodeDecodeError, OSError) as e:
         # Handle encoding errors or network failures
-        error_msg = f"Cannot reach GitHub server at {host}. Check your network connection."
+        error_msg = (
+            f"Cannot reach GitHub server at {host}. Check your network connection."
+        )
         print(f"Error: {error_msg}", file=sys.stderr)
         print(f"Details: {str(e)}", file=sys.stderr)
-        raise GhError(1, error_msg)
+        raise GhError(1, error_msg) from e
 
 
 def _handle_gh_error(result: subprocess.CompletedProcess, host: str) -> None:
@@ -131,13 +133,16 @@ def _handle_gh_error(result: subprocess.CompletedProcess, host: str) -> None:
     stderr_lower = result.stderr.lower() if result.stderr else ""
 
     # Check for authentication-related errors
-    if any(keyword in stderr_lower for keyword in ['authentication', 'credentials', 'token', '401', '403']):
+    if any(
+        keyword in stderr_lower
+        for keyword in ["authentication", "credentials", "token", "401", "403"]
+    ):
         print(f"\n❌ Authentication failed for {host}", file=sys.stderr)
         print(f"   Try: gh auth login --hostname {host}", file=sys.stderr)
-        print(f"   Or:  export GH_ENTERPRISE_TOKEN=<token>", file=sys.stderr)
-        print(f"   Or:  export GH_ENTERPRISE_TOKEN_2=<token>", file=sys.stderr)
+        print("   Or:  export GH_ENTERPRISE_TOKEN=<token>", file=sys.stderr)
+        print("   Or:  export GH_ENTERPRISE_TOKEN_2=<token>", file=sys.stderr)
         if host != "github.com":
-            print(f"   Or:  export GH_TOKEN=<token>", file=sys.stderr)
+            print("   Or:  export GH_TOKEN=<token>", file=sys.stderr)
 
 
 def build_repo_arg(host: str, org: str, repo: str) -> str:
@@ -158,7 +163,13 @@ def build_repo_arg(host: str, org: str, repo: str) -> str:
     return f"{org}/{repo}"
 
 
-def create_issue(host: str, org: str, repo: str, interactive: bool = True, labels: list[str] | None = None) -> GhResult:
+def create_issue(
+    host: str,
+    org: str,
+    repo: str,
+    interactive: bool = True,
+    labels: list[str] | None = None,
+) -> GhResult:
     """
     Invoke gh issue create in interactive mode.
 
@@ -188,11 +199,13 @@ def create_issue(host: str, org: str, repo: str, interactive: bool = True, label
     if interactive:
         # Pure passthrough - let gh handle all I/O and print URL directly
         result = _run_gh_command(
-            cmd, env, host,
+            cmd,
+            env,
+            host,
             capture_output=False,
             stdin=sys.stdin,
             stdout=sys.stdout,
-            stderr=sys.stderr
+            stderr=sys.stderr,
         )
     else:
         result = _run_gh_command(cmd, env, host)
@@ -203,7 +216,7 @@ def create_issue(host: str, org: str, repo: str, interactive: bool = True, label
     return GhResult(
         returncode=result.returncode,
         stdout="",  # Empty in interactive mode
-        stderr=""
+        stderr="",
     )
 
 
@@ -224,12 +237,14 @@ def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
         GhError: If gh command fails
     """
     # Use --jq to filter to only the fields we need
-    jq_filter = '{number: .number, title: .title, html_url: .html_url, body: .body}'
+    jq_filter = "{number: .number, title: .title, html_url: .html_url, body: .body}"
 
     base_cmd = [
-        "gh", "api",
+        "gh",
+        "api",
         f"repos/{org}/{repo}/issues/{issue_number}",
-        "--jq", jq_filter
+        "--jq",
+        jq_filter,
     ]
 
     cmd, env = _prepare_gh_cmd(host, base_cmd)
@@ -240,7 +255,9 @@ def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
         raise GhError(result.returncode, result.stderr)
 
     if not result.stdout:
-        error_msg = f"No response from GitHub server at {host}. Check your network connection."
+        error_msg = (
+            f"No response from GitHub server at {host}. Check your network connection."
+        )
         print(error_msg, file=sys.stderr)
         raise GhError(1, error_msg)
 
@@ -249,10 +266,16 @@ def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
     except json.JSONDecodeError as e:
         error_msg = f"Invalid response from GitHub server at {host}: {str(e)}"
         print(error_msg, file=sys.stderr)
-        raise GhError(1, error_msg)
+        raise GhError(1, error_msg) from e
 
 
-def list_issues(host: str, org: str, repo: str, fields: str = "number,title,url,labels", limit: int = 1000) -> list[dict]:
+def list_issues(
+    host: str,
+    org: str,
+    repo: str,
+    fields: str = "number,title,url,labels",
+    limit: int = 1000,
+) -> list[dict]:
     """
     List all issues with 'notehub' label via gh issue list.
 
@@ -260,7 +283,8 @@ def list_issues(host: str, org: str, repo: str, fields: str = "number,title,url,
         host: GitHub host
         org: Organization or user name
         repo: Repository name
-        fields: Comma-separated list of fields to fetch (e.g., "number,title,body,url,labels")
+        fields: Comma-separated list of fields to fetch
+               (e.g., "number,title,body,url,labels")
         limit: Maximum number of issues to return (default 1000)
 
     Returns:
@@ -272,11 +296,17 @@ def list_issues(host: str, org: str, repo: str, fields: str = "number,title,url,
     repo_arg = build_repo_arg(host, org, repo)
 
     base_cmd = [
-        "gh", "issue", "list",
-        "--repo", repo_arg,
-        "--label", "notehub",
-        "--limit", str(limit),
-        "--json", fields
+        "gh",
+        "issue",
+        "list",
+        "--repo",
+        repo_arg,
+        "--label",
+        "notehub",
+        "--limit",
+        str(limit),
+        "--json",
+        fields,
     ]
 
     cmd, env = _prepare_gh_cmd(host, base_cmd)
@@ -288,7 +318,9 @@ def list_issues(host: str, org: str, repo: str, fields: str = "number,title,url,
 
     # Ensure we have valid output before parsing
     if not result.stdout:
-        error_msg = f"No response from GitHub server at {host}. Check your network connection."
+        error_msg = (
+            f"No response from GitHub server at {host}. Check your network connection."
+        )
         print(error_msg, file=sys.stderr)
         raise GhError(1, error_msg)
 
@@ -297,7 +329,7 @@ def list_issues(host: str, org: str, repo: str, fields: str = "number,title,url,
     except json.JSONDecodeError as e:
         error_msg = f"Invalid response from GitHub server at {host}: {str(e)}"
         print(error_msg, file=sys.stderr)
-        raise GhError(1, error_msg)
+        raise GhError(1, error_msg) from e
 
 
 def check_gh_auth(host: str = "github.com") -> bool:
@@ -363,7 +395,9 @@ def check_gh_installed() -> bool:
     return shutil.which("gh") is not None
 
 
-def ensure_label_exists(host: str, org: str, repo: str, label_name: str, color: str, description: str = "") -> bool:
+def ensure_label_exists(
+    host: str, org: str, repo: str, label_name: str, color: str, description: str = ""
+) -> bool:
     """
     Ensure a label exists in the repository, creating it if necessary.
 
@@ -379,10 +413,19 @@ def ensure_label_exists(host: str, org: str, repo: str, label_name: str, color: 
         bool: True if label exists or was created, False on error
     """
     api_path = f"repos/{org}/{repo}/labels"
-    base_cmd = ["gh", "api", api_path, "-X", "POST",
-                "-f", f"name={label_name}",
-                "-f", f"color={color}",
-                "-f", f"description={description}"]
+    base_cmd = [
+        "gh",
+        "api",
+        api_path,
+        "-X",
+        "POST",
+        "-f",
+        f"name={label_name}",
+        "-f",
+        f"color={color}",
+        "-f",
+        f"description={description}",
+    ]
     cmd, env = _prepare_gh_cmd(host, base_cmd)
 
     try:
@@ -412,7 +455,9 @@ def ensure_label_exists(host: str, org: str, repo: str, label_name: str, color: 
     return False
 
 
-def update_issue(host: str, org: str, repo: str, issue_number: int, body: str) -> GhResult:
+def update_issue(
+    host: str, org: str, repo: str, issue_number: int, body: str
+) -> GhResult:
     """
     Update issue body via gh issue edit.
 
@@ -431,9 +476,14 @@ def update_issue(host: str, org: str, repo: str, issue_number: int, body: str) -
     """
     repo_arg = build_repo_arg(host, org, repo)
     base_cmd = [
-        "gh", "issue", "edit", str(issue_number),
-        "--repo", repo_arg,
-        "--body", body
+        "gh",
+        "issue",
+        "edit",
+        str(issue_number),
+        "--repo",
+        repo_arg,
+        "--body",
+        body,
     ]
 
     cmd, env = _prepare_gh_cmd(host, base_cmd)
@@ -444,7 +494,5 @@ def update_issue(host: str, org: str, repo: str, issue_number: int, body: str) -
         raise GhError(result.returncode, result.stderr)
 
     return GhResult(
-        returncode=result.returncode,
-        stdout=result.stdout,
-        stderr=result.stderr
+        returncode=result.returncode, stdout=result.stdout, stderr=result.stderr
     )

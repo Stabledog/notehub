@@ -46,7 +46,7 @@ notehub list
 **Spec says:**
 ```
 For each match:
-    - invoke 'show' 
+    - invoke 'show'
     - print match in context, highlighted (max 3 line context: before,matching,after)
 ```
 
@@ -146,10 +146,10 @@ Example output:
     Host:       github.com
     Org/Repo:   myorg/myrepo
     Repo Path:  /home/user/projects/myrepo (or "global mode")
-  
+
   Authentication:
     ✓ Authenticated to github.com as username
-  
+
   Or:
     ✗ Not authenticated. Run: gh auth login
 ```
@@ -225,14 +225,14 @@ notehub add
 
 **Current spec:**
 ```
-"note-issue": 
-    - implies that there may be only a subset of issues which are "note-issues" 
+"note-issue":
+    - implies that there may be only a subset of issues which are "note-issues"
       (filter criteria TBD version 2, v1 will not filter at all)
 ```
 
 **Improvement:**
 ```
-"note-issue": 
+"note-issue":
     - In v1: ALL issues in the target repo are treated as note-issues
     - Future versions may filter by label (e.g., "note") or other criteria
     - Current behavior: no distinction between regular issues and notes
@@ -258,7 +258,7 @@ notehub add
 **Current:**
 ```
 notehub edit <note-ident>
-    - open in `$EDITOR` for full-body edit.  
+    - open in `$EDITOR` for full-body edit.
     - send update to host when edit quit (i.e. child process exit)
 ```
 
@@ -345,7 +345,7 @@ Here's a minimal diff-style update to fix critical issues:
 
 ### Git Remote Auto-Detection
 When in a git repository (unless `-g|--global`):
-- Run `git remote get-url origin` 
+- Run `git remote get-url origin`
 - Parse URL for host/org/repo:
   - HTTPS: `https://[host]/[org]/[repo](.git)?`
   - SSH: `git@[host]:[org]/[repo](.git)?`
@@ -354,7 +354,7 @@ When in a git repository (unless `-g|--global`):
 ## Command structure (UPDATE)
 
 ### 5) Cross-repo or cross-org moves
-- `notehub move <note-ident> <TARGET-REPO>`  
+- `notehub move <note-ident> <TARGET-REPO>`
     - Extract issue data via `gh api`
     - Recreate in target repo
     - On success: close original with comment "Moved to [new-URL]"

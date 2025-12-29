@@ -1,6 +1,6 @@
 # notehub — CLI-first GitHub/GHES note & issue manager (Draft 0.4)
 
-A thin, opinionated wrapper over `gh` for fast note-taking using Github issues for backing store.  Shell + Python 3.11+. Context-aware (repo vs global).  
+A thin, opinionated wrapper over `gh` for fast note-taking using Github issues for backing store.  Shell + Python 3.11+. Context-aware (repo vs global).
 
 ---
 
@@ -12,11 +12,11 @@ A thin, opinionated wrapper over `gh` for fast note-taking using Github issues f
 ## Dependencies
 - **Hard**: `gh` (GitHub CLI) configured for all relevant hosts.
 - **Runtime**: bash/zsh, Python 3.11+, standard Unix tools (`sed`, `awk`, `xargs`).
-- **Optional**: `fzf` for interactive pickers; 
+- **Optional**: `fzf` for interactive pickers;
 
 ## Glossary
 j
-- "note-issue":  
+- "note-issue":
     - we're using github issues as notes, but this term removes ambiguity: "an issue which is being treated as a note"
     - implies that there may be only a subset of issues which are "note-issues" (filter criteria TBD version 2, v1 will not filter at all)
 - "store-context": host+org+repo -- resolved on startup as described in config
@@ -31,21 +31,21 @@ j
         - auto-detect from local working copy unless -g|--global
         - git config (global) custom key 'notehub.host'
         - 'github.com'
-        
+
     - Org:
         - --org|-o [name] is top choice
         - auto-detect from local working copy unless -g|--global
-        - Env 'NotehubOrg' 
-        - git config (global) 'notehub.org' 
+        - Env 'NotehubOrg'
+        - git config (global) 'notehub.org'
         - notehub.$USER ($USER being the user's shell environment value)
-    
-    - Repo: 
+
+    - Repo:
         - -r|--repo flag (with special handling for '.')
         - parsed from local git remote spec if in working copy unless -g|--global
-        - Env 'NotehubRepo' 
+        - Env 'NotehubRepo'
         - git config custom key 'notehub.repo' ( skip if -g|--global)
-        - git config (global) key 'notehub.repo' 
-        - 'notehub.default' (literal repo name) 
+        - git config (global) key 'notehub.repo'
+        - 'notehub.default' (literal repo name)
 
 
 ---
@@ -57,7 +57,7 @@ notehub <command> [<subcommand>] [flags] [args]
 ```
 
 ### 1) Setup, context, status
-- `notehub status`  
+- `notehub status`
   - Show detected context (repo path, host, owner/repo, user identity), and `gh` auth state.
   - Show login identity on host
 
@@ -73,21 +73,21 @@ notehub <command> [<subcommand>] [flags] [args]
 - `notehub find "[full-regex]"`
     - Search note-issues full body
         For each match:
-            - invoke 'show' 
+            - invoke 'show'
             - print match in context, highlighted (max 3 line context: before,matching,after)
             - Highlight matching text
 
 ### 4) Edit/update
 - `notehub edit <note-ident>`
-    - open in `$EDITOR` for full-body edit.  
+    - open in `$EDITOR` for full-body edit.
     - send update to host when edit quit (i.e. child process exit)
 
 ### 5) Cross-repo or cross-org moves
-- `notehub move <note-ident> <TARGET-REPO>`  
-    - Use the “extract and rebuild” flow via `gh api` 
+- `notehub move <note-ident> <TARGET-REPO>`
+    - Use the “extract and rebuild” flow via `gh api`
 
 ### Misc
-- Failure to invoke of `gh` fails with `gh not found` 
+- Failure to invoke of `gh` fails with `gh not found`
 - `gh` stderr ouput is passed through to parent stderr
 
 
@@ -125,4 +125,3 @@ Test suite.
 ## /spec
 - `notehub_spec_toplevel.md` - This specification document
 - `filetree.txt` - Directory structure reference
-

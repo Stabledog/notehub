@@ -35,16 +35,16 @@ class StoreContext:
     host: str
     org: str
     repo: str
-    
+
     @classmethod
     def resolve(cls, args: Namespace) -> StoreContext:
         """Resolve context from args, config, env, defaults."""
         pass
-    
+
     def repo_identifier(self) -> str:
         """Return 'org/repo' string."""
         pass
-    
+
     def full_identifier(self) -> str:
         """Return 'host:org/repo' string."""
         pass
@@ -219,7 +219,7 @@ graph TD
     Main[__main__.py] --> CLI[cli.py]
     CLI --> Ctx[context.py]
     CLI --> Cmd[commands/*]
-    
+
     Cmd --> Status[commands/status.py]
     Cmd --> Add[commands/add.py]
     Cmd --> Show[commands/show.py]
@@ -227,34 +227,34 @@ graph TD
     Cmd --> Find[commands/find.py]
     Cmd --> Edit[commands/edit.py]
     Cmd --> Move[commands/move.py]
-    
+
     Status --> Ctx
     Status --> GH[gh_wrapper.py]
     Status --> Cfg[config.py]
-    
+
     Add --> Ctx
     Add --> GH
-    
+
     Show --> Ctx
     Show --> GH
-    
+
     List --> Ctx
     List --> GH
-    
+
     Find --> Ctx
     Find --> GH
-    
+
     Edit --> Ctx
     Edit --> GH
     Edit --> Cfg
-    
+
     Move --> Ctx
     Move --> GH
-    
+
     Ctx --> Cfg
     GH --> External[gh CLI]
     Cfg --> GitCfg[git config]
-    
+
     style External fill:#e1f5ff
     style GitCfg fill:#e1f5ff
 ```
@@ -269,17 +269,17 @@ graph LR
     Ctx --> GitCfg[Git Config]
     Ctx --> Env[Environment]
     Ctx --> Context[StoreContext Object]
-    
+
     Context --> Commands
     Commands --> GH[gh_wrapper]
     GH --> GH_CLI[gh CLI Process]
     GH_CLI --> GitHub[GitHub API]
-    
+
     GitHub --> Response
     Response --> GH
     GH --> Commands
     Commands --> Output[User Output]
-    
+
     style User fill:#ffe1e1
     style Output fill:#e1ffe1
     style GitHub fill:#e1f5ff
@@ -300,7 +300,7 @@ sequenceDiagram
     participant Add as commands/add.py
     participant GH as gh_wrapper.py
     participant GH_CLI as gh CLI
-    
+
     User->>Main: notehub add
     Main->>CLI: main(argv)
     CLI->>CLI: parse_args()
@@ -311,7 +311,7 @@ sequenceDiagram
     Add->>Ctx: context (via resolve)
     Add->>GH: create_issue(host, org, repo, interactive=True)
     GH->>GH_CLI: subprocess.run(["gh", "issue", "create", "--repo", ..., "--label", "notehub"])
-    
+
     alt gh not installed or not authenticated
         GH_CLI-->>GH: error (returncode != 0)
         GH->>User: [gh error message on stderr]
@@ -342,7 +342,7 @@ sequenceDiagram
     participant Cfg as config.py
     participant Editor as $EDITOR Process
     participant GH_CLI as gh CLI
-    
+
     User->>CLI: notehub edit "bug"
     CLI->>Ctx: StoreContext.resolve(args)
     Ctx-->>CLI: context
@@ -350,7 +350,7 @@ sequenceDiagram
     Edit->>Show: resolve_note_ident(context, "bug")
     Show->>GH: search_issues(host, org, repo, "bug in:title")
     GH->>GH_CLI: gh search issues ... label:notehub
-    
+
     alt gh error
         GH_CLI-->>GH: error
         GH->>User: [gh error on stderr]
@@ -392,7 +392,7 @@ sequenceDiagram
     participant Find as commands/find.py
     participant GH as gh_wrapper.py
     participant GH_CLI as gh CLI
-    
+
     User->>CLI: notehub find "TODO.*urgent"
     CLI->>Ctx: StoreContext.resolve(args)
     Ctx-->>CLI: context
@@ -522,13 +522,13 @@ def run_gh(cmd: list[str], capture: bool = True) -> GhResult:
         result = subprocess.run(cmd, capture_output=True, text=True)
     else:
         result = subprocess.run(cmd)
-    
+
     if result.returncode != 0:
         if capture:
             # stderr was captured, show it to user
             print(result.stderr, file=sys.stderr)
         raise GhError(result.returncode, result.stderr if capture else "")
-    
+
     return GhResult(
         returncode=result.returncode,
         stdout=result.stdout if capture else "",
@@ -539,7 +539,7 @@ def run_gh(cmd: list[str], capture: bool = True) -> GhResult:
 def run(args: Namespace) -> int:
     """Execute command - let gh errors surface naturally."""
     context = StoreContext.resolve(args)
-    
+
     try:
         result = create_issue(context.host, context.org, context.repo)
         print(f"Created issue: {extract_url(result.stdout)}")
@@ -571,17 +571,17 @@ def check_gh_installed() -> bool:
 # Only status command uses these checks:
 def run(args):
     context = StoreContext.resolve(args)
-    
+
     if not check_gh_installed():
         print("✗ gh CLI not found")
         print("  Install from https://cli.github.com/")
         return 0  # Status is informational, always returns 0
-    
+
     if check_gh_auth(context.host):
         print(f"✓ Authenticated to {context.host}")
     else:
         print(f"✗ Not authenticated. Run: gh auth login --hostname {context.host}")
-    
+
     return 0
 ```
 
@@ -642,4 +642,3 @@ def run(args):
 - Checks `gh` installation, authentication, user identity
 - Provides setup instructions
 - Always returns 0 (informational, not transactional)
-

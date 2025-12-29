@@ -3,7 +3,6 @@
 """Read and write git config values for notehub settings."""
 
 import os
-import subprocess
 
 
 def get_git_config(key: str, global_only: bool = False) -> str | None:
@@ -27,4 +26,4 @@ def get_editor() -> str:
     Returns:
         Editor command as string
     """
-    return os.environ.get('EDITOR', 'vi')
+    return os.environ.get("EDITOR", "vi")

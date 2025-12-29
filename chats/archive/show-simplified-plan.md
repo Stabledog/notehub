@@ -1,4 +1,4 @@
-lmatheson4_bbeng: I need you to plan a simplified implementation of the 'show' command.  It should just handle explicitly-specified issue ID (numeric) and print the output specified in the spec. 
+lmatheson4_bbeng: I need you to plan a simplified implementation of the 'show' command.  It should just handle explicitly-specified issue ID (numeric) and print the output specified in the spec.
 
 Identify the components that will need to change and the work to be performed.  Don't actually write the code, we will review and iterate
 

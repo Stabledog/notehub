@@ -17,7 +17,7 @@
     # poorly if it gets traits that don't resolve in the current context:
     forward_traits_union = [ tx for tx in filter_chain( aggr_traits( t for t in entity.traits(), chain))  ]
     ```
-    (The programmer can read and understand *what* is happening without the comment, but may be 
+    (The programmer can read and understand *what* is happening without the comment, but may be
     mystified about the needs of the downstream service which is not obivous in the bare code)
 
     - TODOs are useful when known shortcomings or provisional hacks are present:
@@ -32,4 +32,3 @@
 Working with the `gh` authentication is tricky.  `gh_wrapper.py` does what works, and that may not agree with public sources about best-practices or the recommendations of the `gh` owners.
 
 Do not vary from using `_prepare_gh_cmd`, `_handle_gh_error`, etc.  We want all commands to use consistent interaction patterns with `gh` to avoid chaos.
-

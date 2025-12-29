@@ -1,4 +1,4 @@
-lmatheson4_bbeng: Review this spec for internal inconsistencies and conceptual clarity.  
+lmatheson4_bbeng: Review this spec for internal inconsistencies and conceptual clarity.
 
 GitHub Copilot: # Review of notehub_spec_draft.md
 
@@ -14,7 +14,7 @@ GitHub Copilot: # Review of notehub_spec_draft.md
   - `edit <note-ident>` (correct)
   - `show <ISSUE|title-regex>` (different terminology)
   - `move <issue-ident>` (yet another variant)
-  
+
 **Recommendation**: Standardize on `<note-ident>` everywhere.
 
 ### 3. **Missing "note-issue" Filter Criteria**
@@ -69,7 +69,7 @@ What does "auto-detect" mean here? Via `git remote`? This needs explicit specifi
    ```
 
 3. **Define note-issue filter**:
-   Add to spec: "All issues in the configured repo are treated as note-issues" 
+   Add to spec: "All issues in the configured repo are treated as note-issues"
    OR: "Issues with label `note` are note-issues"
 
 4. **Clarify command outputs**:
