@@ -77,64 +77,64 @@ class TestEditInTempFile:
         # Create a real temp file to test modification detection
         test_file = tmp_path / "test.md"
         test_file.write_text("original content")
-        
+
         # Mock tempfile to return our test file
         mock_temp = mocker.Mock()
         mock_temp.name = str(test_file)
         mock_temp.__enter__ = mocker.Mock(return_value=mock_temp)
         mock_temp.__exit__ = mocker.Mock()
         mocker.patch('tempfile.NamedTemporaryFile', return_value=mock_temp)
-        
+
         # Mock subprocess.run to modify the file
-        def mock_edit(cmd, shell=False):
+        def mock_edit(*args, **kwargs):
             # Simulate editor modifying the file
             test_file.write_text("modified content")
             result = mocker.Mock()
             result.returncode = 0
             return result
-        
+
         mocker.patch('subprocess.run', side_effect=mock_edit)
-        
+
         result = edit.edit_in_temp_file("original content", "vim")
-        
+
         assert result == "modified content"
 
     def test_file_unmodified(self, mocker, tmp_path):
         """Should return None when file is not changed."""
         test_file = tmp_path / "test.md"
         test_file.write_text("original content")
-        
+
         mock_temp = mocker.Mock()
         mock_temp.name = str(test_file)
         mock_temp.__enter__ = mocker.Mock(return_value=mock_temp)
         mock_temp.__exit__ = mocker.Mock()
         mocker.patch('tempfile.NamedTemporaryFile', return_value=mock_temp)
-        
+
         # Mock subprocess.run without modifying file
         mock_result = mocker.Mock()
         mock_result.returncode = 0
         mocker.patch('subprocess.run', return_value=mock_result)
-        
+
         result = edit.edit_in_temp_file("original content", "vim")
-        
+
         assert result is None
 
     def test_editor_not_found(self, mocker, tmp_path, capsys):
         """Should handle editor not found error."""
         test_file = tmp_path / "test.md"
         test_file.write_text("content")
-        
+
         mock_temp = mocker.Mock()
         mock_temp.name = str(test_file)
         mock_temp.__enter__ = mocker.Mock(return_value=mock_temp)
         mock_temp.__exit__ = mocker.Mock()
         mocker.patch('tempfile.NamedTemporaryFile', return_value=mock_temp)
-        
+
         # Mock subprocess to raise FileNotFoundError
         mocker.patch('subprocess.run', side_effect=FileNotFoundError())
-        
+
         result = edit.edit_in_temp_file("content", "nonexistent")
-        
+
         assert result is None
         captured = capsys.readouterr()
         assert "not found" in captured.err
@@ -143,18 +143,18 @@ class TestEditInTempFile:
         """Should show Windows-specific message when editor not found."""
         test_file = tmp_path / "test.md"
         test_file.write_text("content")
-        
+
         mock_temp = mocker.Mock()
         mock_temp.name = str(test_file)
         mock_temp.__enter__ = mocker.Mock(return_value=mock_temp)
         mock_temp.__exit__ = mocker.Mock()
         mocker.patch('tempfile.NamedTemporaryFile', return_value=mock_temp)
-        
+
         mocker.patch('subprocess.run', side_effect=FileNotFoundError())
         mocker.patch('sys.platform', 'win32')
-        
+
         result = edit.edit_in_temp_file("content", "vi")
-        
+
         assert result is None
         captured = capsys.readouterr()
         assert ".exe" in captured.err
@@ -163,37 +163,37 @@ class TestEditInTempFile:
         """Should return None when editor exits with error."""
         test_file = tmp_path / "test.md"
         test_file.write_text("content")
-        
+
         mock_temp = mocker.Mock()
         mock_temp.name = str(test_file)
         mock_temp.__enter__ = mocker.Mock(return_value=mock_temp)
         mock_temp.__exit__ = mocker.Mock()
         mocker.patch('tempfile.NamedTemporaryFile', return_value=mock_temp)
-        
+
         mock_result = mocker.Mock()
         mock_result.returncode = 1
         mocker.patch('subprocess.run', return_value=mock_result)
-        
+
         result = edit.edit_in_temp_file("content", "vim")
-        
+
         assert result is None
 
     def test_temp_file_cleanup(self, mocker, tmp_path):
         """Should clean up temp file even on error."""
         test_file = tmp_path / "test.md"
         test_file.write_text("content")
-        
+
         mock_temp = mocker.Mock()
         mock_temp.name = str(test_file)
         mock_temp.__enter__ = mocker.Mock(return_value=mock_temp)
         mock_temp.__exit__ = mocker.Mock()
         mocker.patch('tempfile.NamedTemporaryFile', return_value=mock_temp)
-        
+
         mocker.patch('subprocess.run', side_effect=FileNotFoundError())
         mock_unlink = mocker.patch('os.unlink')
-        
+
         edit.edit_in_temp_file("content", "vim")
-        
+
         mock_unlink.assert_called_once_with(str(test_file))
 
 
@@ -208,26 +208,26 @@ class TestEditRun:
         mock_context.org = 'testorg'
         mock_context.repo = 'testrepo'
         mocker.patch('notehub.commands.edit.StoreContext.resolve', return_value=mock_context)
-        
+
         # Mock note ident resolution
         mocker.patch('notehub.commands.edit.resolve_note_ident', return_value=(42, None))
-        
+
         # Mock get_issue
         mock_issue = {'number': 42, 'body': 'original body'}
         mocker.patch('notehub.commands.edit.get_issue', return_value=mock_issue)
-        
+
         # Mock get_editor
         mocker.patch('notehub.commands.edit.get_editor', return_value='vim')
-        
+
         # Mock edit_in_temp_file
         mocker.patch('notehub.commands.edit.edit_in_temp_file', return_value='modified body')
-        
+
         # Mock update_issue
         mock_update = mocker.patch('notehub.commands.edit.update_issue')
-        
+
         args = Namespace(note_ident='42')
         result = edit.run(args)
-        
+
         assert result == 0
         mock_update.assert_called_once_with('github.com', 'testorg', 'testrepo', 42, 'modified body')
 
@@ -238,17 +238,17 @@ class TestEditRun:
         mock_context.org = 'testorg'
         mock_context.repo = 'testrepo'
         mocker.patch('notehub.commands.edit.StoreContext.resolve', return_value=mock_context)
-        
+
         mocker.patch('notehub.commands.edit.resolve_note_ident', return_value=(42, None))
         mocker.patch('notehub.commands.edit.get_issue', return_value={'body': 'content'})
         mocker.patch('notehub.commands.edit.get_editor', return_value='vim')
-        
+
         # Return None to indicate no changes
         mocker.patch('notehub.commands.edit.edit_in_temp_file', return_value=None)
-        
+
         args = Namespace(note_ident='42')
         result = edit.run(args)
-        
+
         assert result == 0
 
     def test_empty_body_user_confirms(self, mocker):
@@ -258,20 +258,20 @@ class TestEditRun:
         mock_context.org = 'testorg'
         mock_context.repo = 'testrepo'
         mocker.patch('notehub.commands.edit.StoreContext.resolve', return_value=mock_context)
-        
+
         mocker.patch('notehub.commands.edit.resolve_note_ident', return_value=(42, None))
         mocker.patch('notehub.commands.edit.get_issue', return_value={'body': 'content'})
         mocker.patch('notehub.commands.edit.get_editor', return_value='vim')
         mocker.patch('notehub.commands.edit.edit_in_temp_file', return_value='   ')  # Empty/whitespace
-        
+
         # Mock user input to confirm
         mocker.patch('builtins.input', return_value='y')
-        
+
         mock_update = mocker.patch('notehub.commands.edit.update_issue')
-        
+
         args = Namespace(note_ident='42')
         result = edit.run(args)
-        
+
         assert result == 0
         mock_update.assert_called_once()
 
@@ -282,20 +282,20 @@ class TestEditRun:
         mock_context.org = 'testorg'
         mock_context.repo = 'testrepo'
         mocker.patch('notehub.commands.edit.StoreContext.resolve', return_value=mock_context)
-        
+
         mocker.patch('notehub.commands.edit.resolve_note_ident', return_value=(42, None))
         mocker.patch('notehub.commands.edit.get_issue', return_value={'body': 'content'})
         mocker.patch('notehub.commands.edit.get_editor', return_value='vim')
         mocker.patch('notehub.commands.edit.edit_in_temp_file', return_value='')
-        
+
         # Mock user input to decline
         mocker.patch('builtins.input', return_value='n')
-        
+
         mock_update = mocker.patch('notehub.commands.edit.update_issue')
-        
+
         args = Namespace(note_ident='42')
         result = edit.run(args)
-        
+
         assert result == 0
         mock_update.assert_not_called()
         captured = capsys.readouterr()
@@ -308,18 +308,18 @@ class TestEditRun:
         mock_context.org = 'testorg'
         mock_context.repo = 'testrepo'
         mocker.patch('notehub.commands.edit.StoreContext.resolve', return_value=mock_context)
-        
+
         mocker.patch('notehub.commands.edit.resolve_note_ident', return_value=(42, None))
         mocker.patch('notehub.commands.edit.get_issue', return_value={'body': 'content'})
         mocker.patch('notehub.commands.edit.get_editor', return_value='vim')
         mocker.patch('notehub.commands.edit.edit_in_temp_file', return_value='')
-        
+
         # Mock KeyboardInterrupt during input
         mocker.patch('builtins.input', side_effect=KeyboardInterrupt())
-        
+
         args = Namespace(note_ident='42')
         result = edit.run(args)
-        
+
         assert result == 0
         captured = capsys.readouterr()
         assert "cancelled" in captured.out.lower()
@@ -328,14 +328,14 @@ class TestEditRun:
         """Should handle note ident resolution error."""
         mock_context = mocker.Mock()
         mocker.patch('notehub.commands.edit.StoreContext.resolve', return_value=mock_context)
-        
+
         # Return error from resolve_note_ident
-        mocker.patch('notehub.commands.edit.resolve_note_ident', 
+        mocker.patch('notehub.commands.edit.resolve_note_ident',
                     return_value=(None, 'Note not found'))
-        
+
         args = Namespace(note_ident='nonexistent')
         result = edit.run(args)
-        
+
         assert result == 1
         captured = capsys.readouterr()
         assert 'Note not found' in captured.err
@@ -345,13 +345,13 @@ class TestEditRun:
         mock_context = mocker.Mock()
         mocker.patch('notehub.commands.edit.StoreContext.resolve', return_value=mock_context)
         mocker.patch('notehub.commands.edit.resolve_note_ident', return_value=(42, None))
-        
+
         # Mock get_issue to raise GhError
         mocker.patch('notehub.commands.edit.get_issue', side_effect=GhError(1, 'API error'))
-        
+
         args = Namespace(note_ident='42')
         result = edit.run(args)
-        
+
         assert result == 1
 
     def test_gh_error_during_update(self, mocker):
@@ -361,18 +361,18 @@ class TestEditRun:
         mock_context.org = 'testorg'
         mock_context.repo = 'testrepo'
         mocker.patch('notehub.commands.edit.StoreContext.resolve', return_value=mock_context)
-        
+
         mocker.patch('notehub.commands.edit.resolve_note_ident', return_value=(42, None))
         mocker.patch('notehub.commands.edit.get_issue', return_value={'body': 'content'})
         mocker.patch('notehub.commands.edit.get_editor', return_value='vim')
         mocker.patch('notehub.commands.edit.edit_in_temp_file', return_value='modified')
-        
+
         # Mock update_issue to raise GhError
         mocker.patch('notehub.commands.edit.update_issue', side_effect=GhError(1, 'Update failed'))
-        
+
         args = Namespace(note_ident='42')
         result = edit.run(args)
-        
+
         assert result == 1
 
     def test_keyboard_interrupt_during_edit(self, mocker, capsys):
@@ -380,15 +380,15 @@ class TestEditRun:
         mock_context = mocker.Mock()
         mocker.patch('notehub.commands.edit.StoreContext.resolve', return_value=mock_context)
         mocker.patch('notehub.commands.edit.resolve_note_ident', return_value=(42, None))
-        
+
         # Mock edit_in_temp_file to raise KeyboardInterrupt
         mocker.patch('notehub.commands.edit.get_issue', return_value={'body': 'content'})
         mocker.patch('notehub.commands.edit.get_editor', return_value='vim')
         mocker.patch('notehub.commands.edit.edit_in_temp_file', side_effect=KeyboardInterrupt())
-        
+
         args = Namespace(note_ident='42')
         result = edit.run(args)
-        
+
         assert result == 1
         captured = capsys.readouterr()
         assert 'Cancelled' in captured.err
@@ -405,16 +405,16 @@ class TestAddRun:
         mock_context.org = 'testorg'
         mock_context.repo = 'testrepo'
         mocker.patch('notehub.commands.add.StoreContext.resolve', return_value=mock_context)
-        
+
         # Mock ensure_label_exists to succeed
         mock_ensure = mocker.patch('notehub.commands.add.ensure_label_exists', return_value=True)
-        
+
         # Mock create_issue to succeed
         mock_create = mocker.patch('notehub.commands.add.create_issue')
-        
+
         args = Namespace()
         result = add.run(args)
-        
+
         assert result == 0
         mock_ensure.assert_called_once_with(
             'github.com', 'testorg', 'testrepo',
@@ -432,16 +432,16 @@ class TestAddRun:
         mock_context.org = 'testorg'
         mock_context.repo = 'testrepo'
         mocker.patch('notehub.commands.add.StoreContext.resolve', return_value=mock_context)
-        
+
         # Mock ensure_label_exists to fail
         mocker.patch('notehub.commands.add.ensure_label_exists', return_value=False)
-        
+
         # Mock create_issue - should not be called
         mock_create = mocker.patch('notehub.commands.add.create_issue')
-        
+
         args = Namespace()
         result = add.run(args)
-        
+
         assert result == 1
         mock_create.assert_not_called()
         captured = capsys.readouterr()
@@ -454,16 +454,16 @@ class TestAddRun:
         mock_context.org = 'testorg'
         mock_context.repo = 'testrepo'
         mocker.patch('notehub.commands.add.StoreContext.resolve', return_value=mock_context)
-        
+
         mocker.patch('notehub.commands.add.ensure_label_exists', return_value=True)
-        
+
         # Mock create_issue to raise GhError
-        mocker.patch('notehub.commands.add.create_issue', 
+        mocker.patch('notehub.commands.add.create_issue',
                     side_effect=GhError(1, 'API error'))
-        
+
         args = Namespace()
         result = add.run(args)
-        
+
         assert result == 1
 
     def test_context_resolution_integration(self, mocker):
@@ -474,13 +474,13 @@ class TestAddRun:
         mock_context.org = 'mycompany'
         mock_context.repo = 'myproject'
         mocker.patch('notehub.commands.add.StoreContext.resolve', return_value=mock_context)
-        
+
         mock_ensure = mocker.patch('notehub.commands.add.ensure_label_exists', return_value=True)
         mock_create = mocker.patch('notehub.commands.add.create_issue')
-        
+
         args = Namespace()
         add.run(args)
-        
+
         # Verify enterprise host was used
         assert mock_ensure.call_args[0][0] == 'github.example.com'
         assert mock_create.call_args[0][0] == 'github.example.com'

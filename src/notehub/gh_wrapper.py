@@ -70,6 +70,56 @@ def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
     return cmd, env
 
 
+def _run_gh_command(cmd: list[str], env: dict, host: str, capture_output: bool = True,
+                    stdin=None, stdout=None, stderr=None) -> subprocess.CompletedProcess:
+    """
+    Execute gh command with robust error handling for network and encoding issues.
+
+    Wraps subprocess.run with:
+    - Unicode error handling via errors='replace'
+    - Graceful handling of network failures
+    - Clear error messages for connectivity issues
+
+    Args:
+        cmd: Command to execute
+        env: Environment variables
+        host: GitHub hostname (for error messages)
+        capture_output: Whether to capture stdout/stderr
+        stdin/stdout/stderr: Optional I/O redirection
+
+    Returns:
+        subprocess.CompletedProcess result
+
+    Raises:
+        GhError: If command fails or network error occurs
+    """
+    try:
+        if capture_output:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                env=env,
+                errors='replace'
+            )
+        else:
+            result = subprocess.run(
+                cmd,
+                stdin=stdin,
+                stdout=stdout,
+                stderr=stderr,
+                env=env
+            )
+        return result
+
+    except (UnicodeDecodeError, OSError) as e:
+        # Handle encoding errors or network failures
+        error_msg = f"Cannot reach GitHub server at {host}. Check your network connection."
+        print(f"Error: {error_msg}", file=sys.stderr)
+        print(f"Details: {str(e)}", file=sys.stderr)
+        raise GhError(1, error_msg)
+
+
 def _handle_gh_error(result: subprocess.CompletedProcess, host: str) -> None:
     """
     Print helpful error messages based on gh CLI stderr output.
@@ -137,15 +187,15 @@ def create_issue(host: str, org: str, repo: str, interactive: bool = True, label
 
     if interactive:
         # Pure passthrough - let gh handle all I/O and print URL directly
-        result = subprocess.run(
-            cmd,
+        result = _run_gh_command(
+            cmd, env, host,
+            capture_output=False,
             stdin=sys.stdin,
             stdout=sys.stdout,
-            stderr=sys.stderr,
-            env=env
+            stderr=sys.stderr
         )
     else:
-        result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+        result = _run_gh_command(cmd, env, host)
 
     if result.returncode != 0:
         raise GhError(result.returncode, "")
@@ -183,13 +233,23 @@ def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
     ]
 
     cmd, env = _prepare_gh_cmd(host, base_cmd)
-    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    result = _run_gh_command(cmd, env, host)
 
     if result.returncode != 0:
         print(result.stderr, file=sys.stderr)
         raise GhError(result.returncode, result.stderr)
 
-    return json.loads(result.stdout)
+    if not result.stdout:
+        error_msg = f"No response from GitHub server at {host}. Check your network connection."
+        print(error_msg, file=sys.stderr)
+        raise GhError(1, error_msg)
+
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as e:
+        error_msg = f"Invalid response from GitHub server at {host}: {str(e)}"
+        print(error_msg, file=sys.stderr)
+        raise GhError(1, error_msg)
 
 
 def list_issues(host: str, org: str, repo: str, fields: str = "number,title,url,labels", limit: int = 1000) -> list[dict]:
@@ -220,13 +280,24 @@ def list_issues(host: str, org: str, repo: str, fields: str = "number,title,url,
     ]
 
     cmd, env = _prepare_gh_cmd(host, base_cmd)
-    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    result = _run_gh_command(cmd, env, host)
 
     if result.returncode != 0:
         print(result.stderr, file=sys.stderr)
         raise GhError(result.returncode, result.stderr)
 
-    return json.loads(result.stdout)
+    # Ensure we have valid output before parsing
+    if not result.stdout:
+        error_msg = f"No response from GitHub server at {host}. Check your network connection."
+        print(error_msg, file=sys.stderr)
+        raise GhError(1, error_msg)
+
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as e:
+        error_msg = f"Invalid response from GitHub server at {host}: {str(e)}"
+        print(error_msg, file=sys.stderr)
+        raise GhError(1, error_msg)
 
 
 def check_gh_auth(host: str = "github.com") -> bool:
@@ -244,7 +315,10 @@ def check_gh_auth(host: str = "github.com") -> bool:
     base_cmd = ["gh", "repo", "list", "--limit", "1"]
     cmd, env = _prepare_gh_cmd(host, base_cmd)
 
-    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    try:
+        result = _run_gh_command(cmd, env, host)
+    except GhError:
+        return False
 
     if result.returncode != 0:
         # Pass through any errors to console
@@ -269,12 +343,7 @@ def get_gh_user(host: str = "github.com") -> str | None:
         base_cmd = ["gh", "api", "user", "--jq", ".login"]
         cmd, env = _prepare_gh_cmd(host, base_cmd)
 
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            env=env
-        )
+        result = _run_gh_command(cmd, env, host)
 
         if result.returncode == 0:
             return result.stdout.strip()
@@ -316,7 +385,10 @@ def ensure_label_exists(host: str, org: str, repo: str, label_name: str, color: 
                 "-f", f"description={description}"]
     cmd, env = _prepare_gh_cmd(host, base_cmd)
 
-    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    try:
+        result = _run_gh_command(cmd, env, host)
+    except GhError:
+        return False
 
     if result.returncode == 0:
         return True
@@ -365,7 +437,7 @@ def update_issue(host: str, org: str, repo: str, issue_number: int, body: str) -
     ]
 
     cmd, env = _prepare_gh_cmd(host, base_cmd)
-    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    result = _run_gh_command(cmd, env, host)
 
     if result.returncode != 0:
         print(result.stderr, file=sys.stderr)
