@@ -100,6 +100,14 @@ def main(args=None):
     """Parse arguments and dispatch to appropriate command."""
     args = sys.argv[1:] if not args else args
     parser = create_parser()
-    parsed = parser.parse_args(args)
+
+    try:
+        parsed = parser.parse_args(args)
+    except SystemExit as e:
+        # argparse calls sys.exit() on error or after showing help
+        # Display help URL on errors (non-zero exit codes)
+        if e.code != 0:
+            print(f"\nFor comprehensive help, see: {HELP_URL}", file=sys.stderr)
+        raise
 
     return parsed.handler(parsed)
