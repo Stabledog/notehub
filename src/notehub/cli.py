@@ -20,17 +20,26 @@ def add_store_arguments(parser):
 
 def create_parser() -> argparse.ArgumentParser:
     """Build the argument parser with all subcommands."""
-    parser = argparse.ArgumentParser(prog="notehub")
+    parser = argparse.ArgumentParser(
+        prog="notehub",
+        epilog="For comprehensive help, see: https://github.com/Stabledog/notehub/blob/main/notehub-help.md",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Add command
-    add_parser = subparsers.add_parser("add", help="Create a new note-issue")
+    add_parser = subparsers.add_parser(
+        "add",
+        help="Create a new note-issue",
+        epilog="For details, see: https://github.com/Stabledog/notehub/blob/main/notehub-help.md#command-add",
+    )
     add_store_arguments(add_parser)
     add_parser.set_defaults(handler=add.run)
 
     # Show command
     show_parser = subparsers.add_parser(
-        "show", help="Display note-header and URL for specified issues"
+        "show",
+        help="Display note-header and URL for specified issues",
+        epilog="For details, see: https://github.com/Stabledog/notehub/blob/main/notehub-help.md#command-show",
     )
     show_parser.add_argument(
         "note_idents",
@@ -43,13 +52,19 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Status command
     status_parser = subparsers.add_parser(
-        "status", help="Show context, authentication status, and user identity"
+        "status",
+        help="Show context, authentication status, and user identity",
+        epilog="For details, see: https://github.com/Stabledog/notehub/blob/main/notehub-help.md#command-status",
     )
     add_store_arguments(status_parser)
     status_parser.set_defaults(handler=status.run)
 
     # Edit command
-    edit_parser = subparsers.add_parser("edit", help="Edit note-issue body in $EDITOR")
+    edit_parser = subparsers.add_parser(
+        "edit",
+        help="Edit note-issue body in $EDITOR",
+        epilog="For details, see: https://github.com/Stabledog/notehub/blob/main/notehub-help.md#command-edit",
+    )
     edit_parser.add_argument(
         "note_ident", metavar="NOTE-IDENT", help="Issue number or title regex"
     )
@@ -57,13 +72,19 @@ def create_parser() -> argparse.ArgumentParser:
     edit_parser.set_defaults(handler=edit.run)
 
     # List command
-    list_parser = subparsers.add_parser("list", help="List all note-issues")
+    list_parser = subparsers.add_parser(
+        "list",
+        help="List all note-issues",
+        epilog="For details, see: https://github.com/Stabledog/notehub/blob/main/notehub-help.md#command-list",
+    )
     add_store_arguments(list_parser)
     list_parser.set_defaults(handler=list.run)
 
     # Sync command
     sync_parser = subparsers.add_parser(
-        "sync", help="Commit and push cache changes to GitHub"
+        "sync",
+        help="Commit and push cache changes to GitHub",
+        epilog="For details, see: https://github.com/Stabledog/notehub/blob/main/notehub-help.md#command-sync",
     )
     sync_parser.add_argument(
         "note_ident", metavar="NOTE-IDENT", help="Issue number or title regex"
