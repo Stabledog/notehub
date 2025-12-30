@@ -375,7 +375,7 @@ notehub edit NOTE-IDENT [--host HOST] [--org ORG] [--repo REPO] [--global]
 ```
 
 **Description:**
-Edit an existing note-issue body in your `$EDITOR`. The title cannot be changed through this command.
+Edit an existing note-issue body in your `$EDITOR`. The editor will block until you close it, then changes are automatically synced to GitHub.
 
 **Arguments:**
 - `NOTE-IDENT`: Issue number or title regex
@@ -399,16 +399,17 @@ notehub edit 42 --repo project-notes
 ```
 
 **Workflow:**
-1. Fetches current issue body from GitHub
-2. Opens body in your `$EDITOR`
-3. Edit and save
-4. Updates issue on GitHub with new body
+1. Fetches current issue body from GitHub to local cache
+2. Opens body in your `$EDITOR` (blocks until closed)
+3. Edit and save, then close the editor
+4. Automatically syncs changes to GitHub
 5. Displays success message
 
 **Note:**
 - Only the body is editable (not the title)
 - To change the title, use the GitHub web interface
-- Empty body is allowed
+- Changes are automatically synced when you close the editor
+- If you need manual control, you can still use `notehub sync` after editing
 
 ---
 

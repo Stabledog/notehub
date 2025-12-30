@@ -10,7 +10,7 @@ from argparse import Namespace
 from .. import cache
 from ..config import get_editor
 from ..context import StoreContext
-from ..gh_wrapper import GhError, get_issue, get_issue_metadata
+from ..gh_wrapper import GhError, get_issue, get_issue_metadata, update_issue
 from ..utils import resolve_note_ident
 
 
@@ -56,28 +56,32 @@ def _prepare_editor_command(editor: str) -> list[str] | None:
     return editor_parts
 
 
-def _launch_editor_background(editor_cmd: list[str], file_path: str) -> None:
+def _launch_editor_blocking(editor_cmd: list[str], file_path: str) -> int:
     """
-    Launch editor without waiting for it to close.
+    Launch editor and wait for it to close.
 
     Args:
         editor_cmd: Editor command parts (e.g., ['code', '--wait'])
         file_path: Path to file to edit
+
+    Returns:
+        0 if editor exited successfully, non-zero if error
     """
     # Print helpful message
     if "--wait" in editor_cmd or "-w" in editor_cmd:
         print(f"Opening {file_path} in editor...")
+        print("Close the editor when done to continue.")
+    else:
+        print(f"Opening {file_path} in editor...")
 
-    # Launch without waiting (Popen instead of run)
+    # Launch and wait for editor to close
     try:
-        subprocess.Popen(
-            [*editor_cmd, file_path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        result = subprocess.run([*editor_cmd, file_path], shell=False)
+        return result.returncode
     except (FileNotFoundError, OSError) as e:
-        print(f"Warning: Failed to launch editor: {e}", file=sys.stderr)
+        print(f"Error: Failed to launch editor: {e}", file=sys.stderr)
         print(f"Edit manually: {file_path}", file=sys.stderr)
+        return 1
 
 
 def _ensure_cache_current(context: StoreContext, cache_path, issue_number: int) -> None:
@@ -135,8 +139,9 @@ def run(args: Namespace) -> int:
     1. Resolve note-ident to issue number
     2. Get or create cache directory
     3. Ensure cache is current (fetch from GitHub if needed)
-    4. Launch editor on note.md (don't wait)
-    5. Print URL and path
+    4. Print guidance about sync
+    5. Launch editor on note.md (block until closed)
+    6. Auto-sync changes to GitHub
 
     Returns:
         0 if successful, 1 if error
@@ -187,15 +192,49 @@ def run(args: Namespace) -> int:
         # Get note path
         note_path = cache.get_note_path(cache_path)
 
-        # Launch editor (don't wait)
-        _launch_editor_background(editor_cmd, str(note_path))
-
-        # Print info
+        # Print info before launching editor
         print(f"Editing: {note_path}")
         print(
             f"URL: https://{context.host}/{context.org}/{context.repo}/issues/{issue_num}"
         )
-        print(f"Use 'notehub sync {issue_num}' to push changes to GitHub")
+        print(
+            "Changes will be automatically synced to GitHub when you close the editor."
+        )
+        print()
+
+        # Launch editor and block until it closes
+        exit_code = _launch_editor_blocking(editor_cmd, str(note_path))
+
+        if exit_code != 0:
+            print(
+                f"\nWarning: Editor exited with code {exit_code}. "
+                f"Use 'notehub sync {issue_num}' to sync changes manually.",
+                file=sys.stderr,
+            )
+            return exit_code
+
+        print("\nEditor closed. Syncing changes...")
+
+        # Auto-sync: commit if dirty and push to GitHub
+        if cache.commit_if_dirty(cache_path):
+            print("Committed local changes")
+
+        # Read content
+        content = cache.get_note_content(cache_path)
+
+        # Push to GitHub
+        update_issue(context.host, context.org, context.repo, issue_num, content)
+
+        # Fetch updated metadata to get new timestamp
+        metadata = get_issue_metadata(
+            context.host, context.org, context.repo, issue_num
+        )
+        updated_at = metadata.get("updated_at")
+
+        if updated_at:
+            cache.set_last_known_updated_at(cache_path, updated_at)
+
+        print(f"Synced issue #{issue_num}")
 
         return 0
 

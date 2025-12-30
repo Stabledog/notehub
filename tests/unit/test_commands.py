@@ -253,7 +253,23 @@ class TestEditRun:
         mocker.patch(
             "notehub.commands.edit._prepare_editor_command", return_value=["vim"]
         )
-        mock_launch = mocker.patch("notehub.commands.edit._launch_editor_background")
+        mock_launch = mocker.patch(
+            "notehub.commands.edit._launch_editor_blocking", return_value=0
+        )
+
+        # Mock auto-sync operations
+        mocker.patch("notehub.commands.edit.cache.commit_if_dirty", return_value=False)
+        mocker.patch(
+            "notehub.commands.edit.cache.get_note_content", return_value="content"
+        )
+        mocker.patch("notehub.commands.edit.update_issue")
+        mocker.patch(
+            "notehub.commands.edit.get_issue_metadata",
+            return_value={"updated_at": "2025-01-01T00:00:00Z"},
+        )
+        mock_set_ts = mocker.patch(
+            "notehub.commands.edit.cache.set_last_known_updated_at"
+        )
 
         args = Namespace(note_ident="42")
         result = edit.run(args)
@@ -261,6 +277,7 @@ class TestEditRun:
         assert result == 0
         mock_ensure.assert_called_once()
         mock_launch.assert_called_once()
+        mock_set_ts.assert_called_once()
 
     def test_no_changes_made(self, mocker, tmp_path):
         """Should handle cache creation for new issue."""
@@ -287,9 +304,7 @@ class TestEditRun:
         mocker.patch("notehub.commands.edit.get_issue", return_value=mock_issue)
 
         mock_init = mocker.patch("notehub.commands.edit.cache.init_cache")
-        mock_set_ts = mocker.patch(
-            "notehub.commands.edit.cache.set_last_known_updated_at"
-        )
+        mocker.patch("notehub.commands.edit.cache.set_last_known_updated_at")
         mocker.patch(
             "notehub.commands.edit.cache.get_note_path",
             return_value=cache_path / "note.md",
@@ -299,14 +314,29 @@ class TestEditRun:
         mocker.patch(
             "notehub.commands.edit._prepare_editor_command", return_value=["vim"]
         )
-        mocker.patch("notehub.commands.edit._launch_editor_background")
+        mocker.patch("notehub.commands.edit._launch_editor_blocking", return_value=0)
+
+        # Mock auto-sync operations
+        mocker.patch("notehub.commands.edit.cache.commit_if_dirty", return_value=False)
+        mocker.patch(
+            "notehub.commands.edit.cache.get_note_content", return_value="content"
+        )
+        mocker.patch("notehub.commands.edit.update_issue")
+        mocker.patch(
+            "notehub.commands.edit.get_issue_metadata",
+            return_value={"updated_at": "2025-01-01T00:00:00Z"},
+        )
+        mock_set_ts2 = mocker.patch(
+            "notehub.commands.edit.cache.set_last_known_updated_at"
+        )
 
         args = Namespace(note_ident="42")
         result = edit.run(args)
 
         assert result == 0
         mock_init.assert_called_once()
-        mock_set_ts.assert_called_once()
+        # set_last_known_updated_at called twice: once during init, once after sync
+        assert mock_set_ts2.call_count == 2
 
     def test_empty_body_user_confirms(self, mocker, tmp_path):
         """Should handle empty body from GitHub."""
@@ -342,7 +372,16 @@ class TestEditRun:
         mocker.patch(
             "notehub.commands.edit._prepare_editor_command", return_value=["vim"]
         )
-        mocker.patch("notehub.commands.edit._launch_editor_background")
+        mocker.patch("notehub.commands.edit._launch_editor_blocking", return_value=0)
+
+        # Mock auto-sync operations
+        mocker.patch("notehub.commands.edit.cache.commit_if_dirty", return_value=False)
+        mocker.patch("notehub.commands.edit.cache.get_note_content", return_value="")
+        mocker.patch("notehub.commands.edit.update_issue")
+        mocker.patch(
+            "notehub.commands.edit.get_issue_metadata",
+            return_value={"updated_at": "2025-01-01T00:00:00Z"},
+        )
 
         args = Namespace(note_ident="42")
         result = edit.run(args)
@@ -384,7 +423,16 @@ class TestEditRun:
         mocker.patch(
             "notehub.commands.edit._prepare_editor_command", return_value=["vim"]
         )
-        mocker.patch("notehub.commands.edit._launch_editor_background")
+        mocker.patch("notehub.commands.edit._launch_editor_blocking", return_value=0)
+
+        # Mock auto-sync operations
+        mocker.patch("notehub.commands.edit.cache.commit_if_dirty", return_value=False)
+        mocker.patch("notehub.commands.edit.cache.get_note_content", return_value="")
+        mocker.patch("notehub.commands.edit.update_issue")
+        mocker.patch(
+            "notehub.commands.edit.get_issue_metadata",
+            return_value={"updated_at": "2025-01-01T00:00:00Z"},
+        )
 
         args = Namespace(note_ident="42")
         result = edit.run(args)
