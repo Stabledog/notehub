@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from .commands import add, edit, list, show, status
+from .commands import add, edit, list, show, status, sync
 
 
 def add_store_arguments(parser):
@@ -60,6 +60,16 @@ def create_parser() -> argparse.ArgumentParser:
     list_parser = subparsers.add_parser("list", help="List all note-issues")
     add_store_arguments(list_parser)
     list_parser.set_defaults(handler=list.run)
+
+    # Sync command
+    sync_parser = subparsers.add_parser(
+        "sync", help="Commit and push cache changes to GitHub"
+    )
+    sync_parser.add_argument(
+        "note_ident", metavar="NOTE-IDENT", help="Issue number or title regex"
+    )
+    add_store_arguments(sync_parser)
+    sync_parser.set_defaults(handler=sync.run)
 
     return parser
 

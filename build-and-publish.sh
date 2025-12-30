@@ -12,6 +12,7 @@ Build and publish lm-notehub to PyPI.
 
 OPTIONS:
     -h, --help              Show this help message and exit
+    -b, --build-only        Build distribution packages only (skip publishing)
     -p, --publish-only      Skip the build step and only publish existing dist/ files
                            Useful for retrying after a failed publish
 
@@ -21,6 +22,9 @@ ENVIRONMENT:
 EXAMPLES:
     # Normal build and publish
     ./$(basename "$0")
+
+    # Build only (skip publishing)
+    ./$(basename "$0") --build-only
 
     # Retry publish after network failure (skips rebuild)
     ./$(basename "$0") --publish-only
@@ -36,12 +40,17 @@ EOF
 }
 
 PUBLISH_ONLY=false
+BUILD_ONLY=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)
             show_help
+            ;;
+        -b|--build-only)
+            BUILD_ONLY=true
+            shift
             ;;
         -p|--publish-only)
             PUBLISH_ONLY=true
@@ -100,8 +109,13 @@ else
     fi
 fi
 
-echo "Uploading to PyPI..."
-python -m twine upload dist/* -u __token__ -p "$LM_NOTEHUB_PYPI_TOKEN"
+if [ "$BUILD_ONLY" = false ]; then
+    echo "Uploading to PyPI..."
+    python -m twine upload dist/* -u __token__ -p "$LM_NOTEHUB_PYPI_TOKEN"
 
-echo "Done! Package published to PyPI"
-echo "Install with: pip install lm-notehub"
+    echo "Done! Package published to PyPI"
+    echo "Install with: pip install lm-notehub"
+else
+    echo "Build complete (skipping publish)."
+    echo "Distribution files are in dist/"
+fi

@@ -423,6 +423,7 @@ class TestCLI:
         assert "list" in help_text
         assert "edit" in help_text
         assert "status" in help_text
+        assert "sync" in help_text
 
     def test_add_command_sets_handler(self):
         """Should set handler for add command."""
