@@ -6,6 +6,9 @@ import sys
 from .context import StoreContext
 from .gh_wrapper import GhError, list_issues
 
+# Help documentation URL
+HELP_URL = "https://github.com/Stabledog/notehub/blob/main/notehub-help.md"
+
 
 def resolve_note_ident(
     context: StoreContext, ident: str

@@ -4,6 +4,7 @@ from argparse import Namespace
 
 from ..context import StoreContext
 from ..gh_wrapper import check_gh_auth, check_gh_installed, get_gh_user
+from ..utils import HELP_URL
 
 
 def get_env_auth_source() -> str | None:
@@ -84,6 +85,9 @@ def run(args: Namespace) -> int:
         print("    2. export GH_ENTERPRISE_TOKEN=<token>")
         print("    3. export GH_ENTERPRISE_TOKEN_2=<token>")
         print("    4. export GH_TOKEN=<token>")
+
+    print()
+    print(f"For help: {HELP_URL}")
 
     return 0
 
