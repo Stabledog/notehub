@@ -7,20 +7,41 @@ from ..gh_wrapper import check_gh_auth, check_gh_installed, get_gh_user
 from ..utils import HELP_URL
 
 
-def get_env_auth_source() -> str | None:
+def get_env_auth_source(host: str = "github.com") -> str | None:
     """
     Return which environment variable provides authentication, if any.
+    Token priority depends on the host being accessed.
+
+    Args:
+        host: GitHub hostname (e.g., 'github.com' or enterprise host)
 
     Returns:
-        str: Name of the environment variable, or None if none set
+        str: Name of the environment variable, or None if using gh auth
     """
-    if os.environ.get("GH_ENTERPRISE_TOKEN_2"):
-        return "GH_ENTERPRISE_TOKEN_2"
-    if os.environ.get("GH_ENTERPRISE_TOKEN"):
-        return "GH_ENTERPRISE_TOKEN"
-    if os.environ.get("GH_TOKEN"):
-        return "GH_TOKEN"
-    return None
+    if host == "github.com":
+        # For public GitHub, only report token if it's appropriate for public GitHub
+        if os.environ.get("GITHUB_TOKEN"):
+            return "GITHUB_TOKEN"
+        # GH_TOKEN only if no enterprise tokens (they would conflict)
+        if (
+            os.environ.get("GH_TOKEN")
+            and not os.environ.get("GH_ENTERPRISE_TOKEN_2")
+            and not os.environ.get("GH_ENTERPRISE_TOKEN")
+        ):
+            return "GH_TOKEN"
+        # If enterprise tokens are set, we're NOT using them for github.com
+        # (let gh auth take over)
+        return None
+    else:
+        # For enterprise hosts, check enterprise tokens
+        if os.environ.get("GH_ENTERPRISE_TOKEN_2"):
+            return "GH_ENTERPRISE_TOKEN_2"
+        if os.environ.get("GH_ENTERPRISE_TOKEN"):
+            return "GH_ENTERPRISE_TOKEN"
+        # GH_TOKEN only if GITHUB_TOKEN isn't set (they would conflict)
+        if os.environ.get("GH_TOKEN") and not os.environ.get("GITHUB_TOKEN"):
+            return "GH_TOKEN"
+        return None
 
 
 def run(args: Namespace) -> int:
@@ -64,7 +85,7 @@ def run(args: Namespace) -> int:
     print("Authentication:")
 
     # Show environment-based auth if present
-    env_auth = get_env_auth_source()
+    env_auth = get_env_auth_source(context.host)
     if env_auth:
         print(f"  Source: Environment variable ({env_auth})")
     else:
@@ -82,9 +103,12 @@ def run(args: Namespace) -> int:
         print()
         print("  Setup options:")
         print(f"    1. gh auth login --hostname {context.host}")
-        print("    2. export GH_ENTERPRISE_TOKEN=<token>")
-        print("    3. export GH_ENTERPRISE_TOKEN_2=<token>")
-        print("    4. export GH_TOKEN=<token>")
+        if context.host == "github.com":
+            print("    2. export GITHUB_TOKEN=<token>")
+            print("    3. export GH_TOKEN=<token>")
+        else:
+            print("    2. export GH_ENTERPRISE_TOKEN=<token>")
+            print("    3. export GH_ENTERPRISE_TOKEN_2=<token>")
 
     print()
     print(f"For help: {HELP_URL}")

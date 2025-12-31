@@ -30,11 +30,28 @@ class TestPrepareGhCmd:
         assert cmd == ["gh", "api", "user"]
 
     def test_token_priority_enterprise_2(self, mocker):
-        """Should prioritize GH_ENTERPRISE_TOKEN_2 over others."""
+        """For github.com, should use GITHUB_TOKEN and ignore enterprise tokens."""
         mocker.patch.dict(
             "os.environ",
             {
                 "GH_TOKEN": "token1",
+                "GH_ENTERPRISE_TOKEN": "token2",
+                "GH_ENTERPRISE_TOKEN_2": "token3",
+                "GITHUB_TOKEN": "token4",
+            },
+            clear=True,
+        )
+
+        cmd, env = _prepare_gh_cmd("github.com", ["gh", "api", "user"])
+
+        assert env["GH_TOKEN"] == "token4"
+        assert env["GH_ENTERPRISE_TOKEN"] == "token4"
+
+    def test_token_priority_enterprise(self, mocker):
+        """For github.com with only enterprise tokens, should remove them to use gh auth."""
+        mocker.patch.dict(
+            "os.environ",
+            {
                 "GH_ENTERPRISE_TOKEN": "token2",
                 "GH_ENTERPRISE_TOKEN_2": "token3",
             },
@@ -43,27 +60,14 @@ class TestPrepareGhCmd:
 
         cmd, env = _prepare_gh_cmd("github.com", ["gh", "api", "user"])
 
-        assert env["GH_TOKEN"] == "token3"
-        assert env["GH_ENTERPRISE_TOKEN"] == "token3"
-
-    def test_token_priority_enterprise(self, mocker):
-        """Should use GH_ENTERPRISE_TOKEN when TOKEN_2 not available."""
-        mocker.patch.dict(
-            "os.environ",
-            {
-                "GH_TOKEN": "token1",
-                "GH_ENTERPRISE_TOKEN": "token2",
-            },
-            clear=True,
-        )
-
-        cmd, env = _prepare_gh_cmd("github.com", ["gh", "api", "user"])
-
-        assert env["GH_TOKEN"] == "token2"
-        assert env["GH_ENTERPRISE_TOKEN"] == "token2"
+        # Enterprise tokens removed for github.com, let gh use stored credentials
+        assert "GH_TOKEN" not in env
+        assert "GH_ENTERPRISE_TOKEN" not in env
+        assert "GH_ENTERPRISE_TOKEN_2" not in env
+        assert "GITHUB_TOKEN" not in env
 
     def test_token_priority_gh_token(self, mocker):
-        """Should use GH_TOKEN when enterprise tokens not available."""
+        """For github.com, should use GH_TOKEN only if no enterprise tokens present."""
         mocker.patch.dict("os.environ", {"GH_TOKEN": "token1"}, clear=True)
 
         cmd, env = _prepare_gh_cmd("github.com", ["gh", "api", "user"])
@@ -71,13 +75,70 @@ class TestPrepareGhCmd:
         assert env["GH_TOKEN"] == "token1"
         assert env["GH_ENTERPRISE_TOKEN"] == "token1"
 
+    def test_gh_token_ignored_with_enterprise_tokens(self, mocker):
+        """For github.com, GH_TOKEN should be ignored if enterprise tokens are present."""
+        mocker.patch.dict(
+            "os.environ",
+            {
+                "GH_TOKEN": "token1",
+                "GH_ENTERPRISE_TOKEN_2": "enterprise-token",
+            },
+            clear=True,
+        )
+
+        cmd, env = _prepare_gh_cmd("github.com", ["gh", "api", "user"])
+
+        # Should remove all tokens to let gh auth take over
+        assert "GH_TOKEN" not in env
+        assert "GH_ENTERPRISE_TOKEN" not in env
+        assert "GH_ENTERPRISE_TOKEN_2" not in env
+
+    def test_enterprise_host_token_priority(self, mocker):
+        """For enterprise hosts, should prioritize enterprise tokens over GITHUB_TOKEN."""
+        mocker.patch.dict(
+            "os.environ",
+            {
+                "GITHUB_TOKEN": "token1",
+                "GH_TOKEN": "token2",
+                "GH_ENTERPRISE_TOKEN": "token3",
+                "GH_ENTERPRISE_TOKEN_2": "token4",
+            },
+            clear=True,
+        )
+
+        cmd, env = _prepare_gh_cmd("github.enterprise.com", ["gh", "api", "user"])
+
+        # Enterprise host should prefer GH_ENTERPRISE_TOKEN_2
+        assert env["GH_TOKEN"] == "token4"
+        assert env["GH_ENTERPRISE_TOKEN"] == "token4"
+
+    def test_enterprise_host_with_only_github_token(self, mocker):
+        """For enterprise host with only GITHUB_TOKEN, should use gh auth instead."""
+        mocker.patch.dict(
+            "os.environ",
+            {
+                "GITHUB_TOKEN": "public-token",
+            },
+            clear=True,
+        )
+
+        cmd, env = _prepare_gh_cmd("github.enterprise.com", ["gh", "api", "user"])
+
+        # No appropriate token, let gh use stored credentials
+        assert "GH_TOKEN" not in env
+        assert "GH_ENTERPRISE_TOKEN" not in env
+        assert "GITHUB_TOKEN" not in env
+
     def test_no_token_available(self, mocker):
-        """Should handle case when no token is set."""
+        """Should remove all token env vars when no token is set to use gh auth."""
         mocker.patch.dict("os.environ", {}, clear=True)
 
         cmd, env = _prepare_gh_cmd("github.com", ["gh", "api", "user"])
 
         assert "GH_TOKEN" not in env
+        assert "GH_ENTERPRISE_TOKEN" not in env
+        assert "GH_ENTERPRISE_TOKEN_2" not in env
+        assert "GITHUB_TOKEN" not in env
         assert env["GH_HOST"] == "github.com"
 
 

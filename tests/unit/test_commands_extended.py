@@ -262,7 +262,7 @@ class TestStatusRun:
     """Tests for status run function."""
 
     def test_status_authenticated_with_env(self, mocker, capsys):
-        """Should display status when authenticated via environment."""
+        """Should display status when authenticated via appropriate environment token."""
         mock_context = mocker.Mock()
         mock_context.host = "github.com"
         mock_context.org = "testorg"
@@ -276,7 +276,8 @@ class TestStatusRun:
             "notehub.commands.status.get_local_repo_path", return_value="/path/to/repo"
         )
         mocker.patch("notehub.commands.status.check_gh_installed", return_value=True)
-        mocker.patch.dict("os.environ", {"GH_ENTERPRISE_TOKEN_2": "token"}, clear=True)
+        # Use GITHUB_TOKEN for github.com (enterprise token would be ignored)
+        mocker.patch.dict("os.environ", {"GITHUB_TOKEN": "token"}, clear=True)
         mocker.patch("notehub.commands.status.check_gh_auth", return_value=True)
         mocker.patch("notehub.commands.status.get_gh_user", return_value="testuser")
 
@@ -289,7 +290,39 @@ class TestStatusRun:
         assert "github.com" in captured.out
         assert "testorg" in captured.out
         assert "testrepo" in captured.out
-        assert "GH_ENTERPRISE_TOKEN_2" in captured.out
+        assert "GITHUB_TOKEN" in captured.out
+        assert "Authenticated" in captured.out
+        assert "testuser" in captured.out
+
+    def test_status_with_enterprise_token_for_github_com(self, mocker, capsys):
+        """Should use gh auth when enterprise tokens are set for github.com."""
+        mock_context = mocker.Mock()
+        mock_context.host = "github.com"
+        mock_context.org = "testorg"
+        mock_context.repo = "testrepo"
+        mock_context.full_identifier = mocker.Mock(return_value="testorg/testrepo")
+        mocker.patch(
+            "notehub.commands.status.StoreContext.resolve", return_value=mock_context
+        )
+
+        mocker.patch(
+            "notehub.commands.status.get_local_repo_path", return_value="/path/to/repo"
+        )
+        mocker.patch("notehub.commands.status.check_gh_installed", return_value=True)
+        # Enterprise token set but should be ignored for github.com
+        mocker.patch.dict("os.environ", {"GH_ENTERPRISE_TOKEN_2": "token"}, clear=True)
+        mocker.patch("notehub.commands.status.check_gh_auth", return_value=True)
+        mocker.patch("notehub.commands.status.get_gh_user", return_value="testuser")
+
+        args = Namespace()
+        result = status.run(args)
+
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Store Context:" in captured.out
+        assert "github.com" in captured.out
+        # Should use gh auth, not enterprise token
+        assert "gh auth (stored credentials)" in captured.out
         assert "Authenticated" in captured.out
         assert "testuser" in captured.out
 
@@ -339,16 +372,60 @@ class TestStatusRun:
         assert "https://cli.github.com/" in captured.out
 
     def test_get_env_auth_source_priority(self, mocker):
-        """Should return highest priority token env var."""
-        mocker.patch.dict("os.environ", {"GH_ENTERPRISE_TOKEN_2": "token"}, clear=True)
-        assert status.get_env_auth_source() == "GH_ENTERPRISE_TOKEN_2"
+        """Should return appropriate token env var based on host, or None to use gh auth."""
+        # For github.com with GITHUB_TOKEN
+        mocker.patch.dict(
+            "os.environ",
+            {"GITHUB_TOKEN": "token1", "GH_ENTERPRISE_TOKEN_2": "token2"},
+            clear=True,
+        )
+        assert status.get_env_auth_source("github.com") == "GITHUB_TOKEN"
+
+        # For github.com with only GH_TOKEN (no enterprise tokens)
+        mocker.patch.dict("os.environ", {"GH_TOKEN": "token"}, clear=True)
+        assert status.get_env_auth_source("github.com") == "GH_TOKEN"
+
+        # For github.com with enterprise tokens but no GITHUB_TOKEN - should use gh auth
+        mocker.patch.dict(
+            "os.environ",
+            {"GH_ENTERPRISE_TOKEN_2": "enterprise-token"},
+            clear=True,
+        )
+        assert status.get_env_auth_source("github.com") is None
+
+        # For github.com with GH_TOKEN and enterprise tokens - should use gh auth
+        mocker.patch.dict(
+            "os.environ",
+            {"GH_TOKEN": "token", "GH_ENTERPRISE_TOKEN": "enterprise"},
+            clear=True,
+        )
+        assert status.get_env_auth_source("github.com") is None
+
+        # For enterprise hosts with enterprise tokens
+        mocker.patch.dict(
+            "os.environ",
+            {"GITHUB_TOKEN": "token1", "GH_ENTERPRISE_TOKEN_2": "token2"},
+            clear=True,
+        )
+        assert (
+            status.get_env_auth_source("enterprise.github.com")
+            == "GH_ENTERPRISE_TOKEN_2"
+        )
 
         mocker.patch.dict("os.environ", {"GH_ENTERPRISE_TOKEN": "token"}, clear=True)
-        assert status.get_env_auth_source() == "GH_ENTERPRISE_TOKEN"
+        assert (
+            status.get_env_auth_source("enterprise.github.com") == "GH_ENTERPRISE_TOKEN"
+        )
 
+        # For enterprise host with only GH_TOKEN (no GITHUB_TOKEN)
         mocker.patch.dict("os.environ", {"GH_TOKEN": "token"}, clear=True)
-        assert status.get_env_auth_source() == "GH_TOKEN"
+        assert status.get_env_auth_source("enterprise.github.com") == "GH_TOKEN"
 
+        # For enterprise host with only GITHUB_TOKEN - should use gh auth
+        mocker.patch.dict("os.environ", {"GITHUB_TOKEN": "token"}, clear=True)
+        assert status.get_env_auth_source("enterprise.github.com") is None
+
+        # No token set
         mocker.patch.dict("os.environ", {}, clear=True)
         assert status.get_env_auth_source() is None
 

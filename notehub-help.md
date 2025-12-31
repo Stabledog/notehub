@@ -55,10 +55,18 @@ gh auth login --hostname <your-enterprise-github-hostname>
 ```
 
 **Token Environment Variables:**
-Notehub checks these environment variables in order:
-1. `GH_ENTERPRISE_TOKEN_2`
+Notehub checks these environment variables in a host-aware order:
+
+**For github.com:**
+1. `GITHUB_TOKEN` (recommended for public GitHub)
+2. `GH_TOKEN`
+3. `GH_ENTERPRISE_TOKEN_2` (fallback)
+4. `GH_ENTERPRISE_TOKEN` (fallback)
+
+**For GitHub Enterprise hosts:**
+1. `GH_ENTERPRISE_TOKEN_2` (recommended for enterprise)
 2. `GH_ENTERPRISE_TOKEN`
-3. `GITHUB_TOKEN`
+3. `GH_TOKEN` (fallback)
 
 **Verify authentication:**
 ```bash

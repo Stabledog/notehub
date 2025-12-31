@@ -29,8 +29,9 @@ def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
     Prepare gh command with proper hostname and auth environment.
 
     Mimics the gh_enterprise wrapper pattern:
-    - Checks GH_ENTERPRISE_TOKEN_2 → GH_ENTERPRISE_TOKEN → GH_TOKEN
-    - Sets both GH_TOKEN and GH_ENTERPRISE_TOKEN in subprocess env
+    - For github.com: Prefers GITHUB_TOKEN → GH_TOKEN → gh auth stored credentials
+    - For enterprise hosts: Prefers GH_ENTERPRISE_TOKEN_2 → GH_ENTERPRISE_TOKEN → gh auth stored credentials
+    - Only sets token env vars if explicitly provided (otherwise uses gh auth)
     - Sets GH_HOST to target the correct GitHub instance
     - Sets GIT_EDITOR from EDITOR for gh's benefit
 
@@ -43,19 +44,42 @@ def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
     """
     env = os.environ.copy()
 
-    # Token priority: GH_ENTERPRISE_TOKEN_2 > GH_ENTERPRISE_TOKEN > GH_TOKEN
+    # Check if explicit token is provided for this host
+    # If no explicit token, let gh use its stored credentials
     token = None
-    if "GH_ENTERPRISE_TOKEN_2" in env:
-        token = env["GH_ENTERPRISE_TOKEN_2"]
-    elif "GH_ENTERPRISE_TOKEN" in env:
-        token = env["GH_ENTERPRISE_TOKEN"]
-    elif "GH_TOKEN" in env:
-        token = env["GH_TOKEN"]
+    if host == "github.com":
+        # For public GitHub, only use environment tokens if explicitly set for public GitHub
+        if "GITHUB_TOKEN" in env:
+            token = env["GITHUB_TOKEN"]
+        elif (
+            "GH_TOKEN" in env
+            and "GH_ENTERPRISE_TOKEN_2" not in env
+            and "GH_ENTERPRISE_TOKEN" not in env
+        ):
+            # Only use GH_TOKEN for github.com if enterprise tokens aren't set
+            token = env["GH_TOKEN"]
+        # Otherwise: no explicit token, let gh use stored credentials
+    else:
+        # For enterprise hosts, check enterprise tokens
+        if "GH_ENTERPRISE_TOKEN_2" in env:
+            token = env["GH_ENTERPRISE_TOKEN_2"]
+        elif "GH_ENTERPRISE_TOKEN" in env:
+            token = env["GH_ENTERPRISE_TOKEN"]
+        elif "GH_TOKEN" in env and "GITHUB_TOKEN" not in env:
+            # Only use GH_TOKEN for enterprise if GITHUB_TOKEN isn't set
+            token = env["GH_TOKEN"]
+        # Otherwise: no explicit token, let gh use stored credentials
 
-    # If we found a token, set both GH_TOKEN and GH_ENTERPRISE_TOKEN
+    # Only set token environment variables if we found an explicit token
     if token:
         env["GH_TOKEN"] = token
         env["GH_ENTERPRISE_TOKEN"] = token
+    else:
+        # Remove enterprise tokens from env to prevent gh from using wrong credentials
+        env.pop("GH_ENTERPRISE_TOKEN_2", None)
+        env.pop("GH_ENTERPRISE_TOKEN", None)
+        env.pop("GH_TOKEN", None)
+        env.pop("GITHUB_TOKEN", None)
 
     # Set GH_HOST to target the correct GitHub instance
     env["GH_HOST"] = host
