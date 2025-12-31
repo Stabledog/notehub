@@ -430,9 +430,7 @@ class TestEnsureLabelExists:
         mock_result.stderr = ""
         mocker.patch("subprocess.run", return_value=mock_result)
 
-        result = ensure_label_exists(
-            "github.com", "testorg", "testrepo", "notehub", "FFC107", "Notehub label"
-        )
+        result = ensure_label_exists("github.com", "testorg", "testrepo", "notehub", "FFC107", "Notehub label")
 
         assert result is True
 
@@ -451,9 +449,7 @@ class TestEnsureLabelExists:
         mock_result.stderr = ""
         mocker.patch("subprocess.run", return_value=mock_result)
 
-        result = ensure_label_exists(
-            "github.com", "testorg", "testrepo", "notehub", "FFC107"
-        )
+        result = ensure_label_exists("github.com", "testorg", "testrepo", "notehub", "FFC107")
 
         assert result is True
 
@@ -467,9 +463,7 @@ class TestEnsureLabelExists:
         mock_result.stderr = ""
         mocker.patch("subprocess.run", return_value=mock_result)
 
-        result = ensure_label_exists(
-            "github.com", "testorg", "testrepo", "notehub", "FFC107"
-        )
+        result = ensure_label_exists("github.com", "testorg", "testrepo", "notehub", "FFC107")
 
         assert result is False
 
@@ -483,9 +477,7 @@ class TestEnsureLabelExists:
         mock_result.stderr = ""
         mocker.patch("subprocess.run", return_value=mock_result)
 
-        result = ensure_label_exists(
-            "github.com", "testorg", "testrepo", "notehub", "FFC107"
-        )
+        result = ensure_label_exists("github.com", "testorg", "testrepo", "notehub", "FFC107")
 
         assert result is False
 
@@ -503,9 +495,7 @@ class TestUpdateIssue:
         mock_result.stderr = ""
         mocker.patch("subprocess.run", return_value=mock_result)
 
-        result = update_issue(
-            "github.com", "testorg", "testrepo", 42, "New body content"
-        )
+        result = update_issue("github.com", "testorg", "testrepo", 42, "New body content")
 
         assert result.returncode == 0
         assert result.stdout == "Issue updated"

@@ -33,15 +33,12 @@ def run(args: Namespace) -> int:
             return 1
 
         # Get cache path
-        cache_path = cache.get_cache_path(
-            context.host, context.org, context.repo, issue_num
-        )
+        cache_path = cache.get_cache_path(context.host, context.org, context.repo, issue_num)
 
         # Check if cache exists
         if not cache_path.exists():
             print(
-                f"Error: No cache found for issue #{issue_num}. "
-                f"Use 'notehub edit {issue_num}' first.",
+                f"Error: No cache found for issue #{issue_num}. Use 'notehub edit {issue_num}' first.",
                 file=sys.stderr,
             )
             return 1
@@ -58,18 +55,14 @@ def run(args: Namespace) -> int:
         update_issue(context.host, context.org, context.repo, issue_num, content)
 
         # Fetch updated metadata to get new timestamp
-        metadata = get_issue_metadata(
-            context.host, context.org, context.repo, issue_num
-        )
+        metadata = get_issue_metadata(context.host, context.org, context.repo, issue_num)
         updated_at = metadata.get("updated_at")
 
         if updated_at:
             cache.set_last_known_updated_at(cache_path, updated_at)
 
         print(f"Synced issue #{issue_num}")
-        print(
-            f"URL: https://{context.host}/{context.org}/{context.repo}/issues/{issue_num}"
-        )
+        print(f"URL: https://{context.host}/{context.org}/{context.repo}/issues/{issue_num}")
 
         return 0
 

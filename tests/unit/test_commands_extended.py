@@ -21,20 +21,14 @@ class TestShowRun:
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
 
-        mocker.patch(
-            "notehub.commands.show.resolve_note_ident", return_value=(42, None)
-        )
+        mocker.patch("notehub.commands.show.resolve_note_ident", return_value=(42, None))
 
         mock_context.host = "github.com"
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
-        mocker.patch(
-            "notehub.commands.show.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.show.StoreContext.resolve", return_value=mock_context)
 
-        mocker.patch(
-            "notehub.commands.show.resolve_note_ident", return_value=(42, None)
-        )
+        mocker.patch("notehub.commands.show.resolve_note_ident", return_value=(42, None))
 
         mock_issue = {
             "number": 42,
@@ -42,9 +36,7 @@ class TestShowRun:
             "html_url": "https://github.com/testorg/testrepo/issues/42",
         }
         mocker.patch("notehub.commands.show.get_issue", return_value=mock_issue)
-        mocker.patch(
-            "notehub.commands.show.format_note_header", return_value="#42: Test Issue"
-        )
+        mocker.patch("notehub.commands.show.format_note_header", return_value="#42: Test Issue")
 
         args = Namespace(note_idents=["42"])
         result = show.run(args)
@@ -60,9 +52,7 @@ class TestShowRun:
         mock_context.host = "github.com"
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
-        mocker.patch(
-            "notehub.commands.show.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.show.StoreContext.resolve", return_value=mock_context)
 
         # Mock resolve_note_ident to return different issue numbers
         mocker.patch(
@@ -99,9 +89,7 @@ class TestShowRun:
     def test_show_partial_failure(self, mocker, capsys):
         """Should continue processing after error and return error code."""
         mock_context = mocker.Mock()
-        mocker.patch(
-            "notehub.commands.show.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.show.StoreContext.resolve", return_value=mock_context)
 
         # First succeeds, second fails, third succeeds
         mocker.patch(
@@ -129,16 +117,10 @@ class TestShowRun:
     def test_show_gh_error(self, mocker, capsys):
         """Should handle GhError during issue fetch."""
         mock_context = mocker.Mock()
-        mocker.patch(
-            "notehub.commands.show.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.show.StoreContext.resolve", return_value=mock_context)
 
-        mocker.patch(
-            "notehub.commands.show.resolve_note_ident", return_value=(42, None)
-        )
-        mocker.patch(
-            "notehub.commands.show.get_issue", side_effect=GhError(1, "API error")
-        )
+        mocker.patch("notehub.commands.show.resolve_note_ident", return_value=(42, None))
+        mocker.patch("notehub.commands.show.get_issue", side_effect=GhError(1, "API error"))
 
         args = Namespace(note_idents=["42"])
         result = show.run(args)
@@ -150,9 +132,7 @@ class TestShowRun:
     def test_show_all_failures(self, mocker, capsys):
         """Should handle all idents failing."""
         mock_context = mocker.Mock()
-        mocker.patch(
-            "notehub.commands.show.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.show.StoreContext.resolve", return_value=mock_context)
 
         mocker.patch(
             "notehub.commands.show.resolve_note_ident",
@@ -174,9 +154,7 @@ class TestListRun:
         mock_context.host = "github.com"
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
-        mocker.patch(
-            "notehub.commands.list.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.list.StoreContext.resolve", return_value=mock_context)
 
         mock_issues = [
             {"number": 42, "title": "First", "url": "url1"},
@@ -201,9 +179,7 @@ class TestListRun:
     def test_list_empty(self, mocker, capsys):
         """Should handle empty issue list."""
         mock_context = mocker.Mock()
-        mocker.patch(
-            "notehub.commands.list.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.list.StoreContext.resolve", return_value=mock_context)
 
         mocker.patch("notehub.commands.list.list_issues", return_value=[])
 
@@ -217,13 +193,9 @@ class TestListRun:
     def test_list_gh_error(self, mocker):
         """Should return error code on GhError."""
         mock_context = mocker.Mock()
-        mocker.patch(
-            "notehub.commands.list.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.list.StoreContext.resolve", return_value=mock_context)
 
-        mocker.patch(
-            "notehub.commands.list.list_issues", side_effect=GhError(1, "API error")
-        )
+        mocker.patch("notehub.commands.list.list_issues", side_effect=GhError(1, "API error"))
 
         args = Namespace()
         result = list_cmd.run(args)
@@ -233,9 +205,7 @@ class TestListRun:
     def test_list_formatting_consistency(self, mocker, capsys):
         """Should match show command formatting with blank lines."""
         mock_context = mocker.Mock()
-        mocker.patch(
-            "notehub.commands.list.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.list.StoreContext.resolve", return_value=mock_context)
 
         mock_issues = [
             {"number": 1, "title": "A", "url": "u1"},
@@ -268,13 +238,9 @@ class TestStatusRun:
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
         mock_context.full_identifier = mocker.Mock(return_value="testorg/testrepo")
-        mocker.patch(
-            "notehub.commands.status.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.status.StoreContext.resolve", return_value=mock_context)
 
-        mocker.patch(
-            "notehub.commands.status.get_local_repo_path", return_value="/path/to/repo"
-        )
+        mocker.patch("notehub.commands.status.get_local_repo_path", return_value="/path/to/repo")
         mocker.patch("notehub.commands.status.check_gh_installed", return_value=True)
         # Use GITHUB_TOKEN for github.com (enterprise token would be ignored)
         mocker.patch.dict("os.environ", {"GITHUB_TOKEN": "token"}, clear=True)
@@ -301,13 +267,9 @@ class TestStatusRun:
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
         mock_context.full_identifier = mocker.Mock(return_value="testorg/testrepo")
-        mocker.patch(
-            "notehub.commands.status.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.status.StoreContext.resolve", return_value=mock_context)
 
-        mocker.patch(
-            "notehub.commands.status.get_local_repo_path", return_value="/path/to/repo"
-        )
+        mocker.patch("notehub.commands.status.get_local_repo_path", return_value="/path/to/repo")
         mocker.patch("notehub.commands.status.check_gh_installed", return_value=True)
         # Enterprise token set but should be ignored for github.com
         mocker.patch.dict("os.environ", {"GH_ENTERPRISE_TOKEN_2": "token"}, clear=True)
@@ -332,12 +294,8 @@ class TestStatusRun:
         mock_context.host = "github.example.com"
         mock_context.org = "org"
         mock_context.repo = "repo"
-        mock_context.full_identifier = mocker.Mock(
-            return_value="github.example.com:org/repo"
-        )
-        mocker.patch(
-            "notehub.commands.status.StoreContext.resolve", return_value=mock_context
-        )
+        mock_context.full_identifier = mocker.Mock(return_value="github.example.com:org/repo")
+        mocker.patch("notehub.commands.status.StoreContext.resolve", return_value=mock_context)
 
         mocker.patch("notehub.commands.status.get_local_repo_path", return_value=None)
         mocker.patch("notehub.commands.status.check_gh_installed", return_value=True)
@@ -356,9 +314,7 @@ class TestStatusRun:
     def test_status_gh_not_installed(self, mocker, capsys):
         """Should show gh not installed message."""
         mock_context = mocker.Mock()
-        mocker.patch(
-            "notehub.commands.status.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.status.StoreContext.resolve", return_value=mock_context)
 
         mocker.patch("notehub.commands.status.get_local_repo_path", return_value=None)
         mocker.patch("notehub.commands.status.check_gh_installed", return_value=False)
@@ -407,15 +363,10 @@ class TestStatusRun:
             {"GITHUB_TOKEN": "token1", "GH_ENTERPRISE_TOKEN_2": "token2"},
             clear=True,
         )
-        assert (
-            status.get_env_auth_source("enterprise.github.com")
-            == "GH_ENTERPRISE_TOKEN_2"
-        )
+        assert status.get_env_auth_source("enterprise.github.com") == "GH_ENTERPRISE_TOKEN_2"
 
         mocker.patch.dict("os.environ", {"GH_ENTERPRISE_TOKEN": "token"}, clear=True)
-        assert (
-            status.get_env_auth_source("enterprise.github.com") == "GH_ENTERPRISE_TOKEN"
-        )
+        assert status.get_env_auth_source("enterprise.github.com") == "GH_ENTERPRISE_TOKEN"
 
         # For enterprise host with only GH_TOKEN (no GITHUB_TOKEN)
         mocker.patch.dict("os.environ", {"GH_TOKEN": "token"}, clear=True)
@@ -458,13 +409,9 @@ class TestStatusRun:
         mock_context.org = "org"
         mock_context.repo = "repo"
         mock_context.full_identifier = mocker.Mock(return_value="org/repo")
-        mocker.patch(
-            "notehub.commands.status.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.status.StoreContext.resolve", return_value=mock_context)
 
-        mocker.patch(
-            "notehub.commands.status.get_local_repo_path", return_value="/local/path"
-        )
+        mocker.patch("notehub.commands.status.get_local_repo_path", return_value="/local/path")
         mocker.patch("notehub.commands.status.check_gh_installed", return_value=True)
         mocker.patch.dict("os.environ", {}, clear=True)
         mocker.patch("notehub.commands.status.check_gh_auth", return_value=True)

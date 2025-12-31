@@ -101,14 +101,11 @@ def _ensure_cache_current(context: StoreContext, cache_path, issue_number: int) 
 
     # Fetch metadata from GitHub
     try:
-        metadata = get_issue_metadata(
-            context.host, context.org, context.repo, issue_number
-        )
+        metadata = get_issue_metadata(context.host, context.org, context.repo, issue_number)
     except GhError:
         # If issue doesn't exist, delete cache
         print(
-            f"Warning: Issue #{issue_number} no longer exists on GitHub. "
-            f"Removing cache.",
+            f"Warning: Issue #{issue_number} no longer exists on GitHub. Removing cache.",
             file=sys.stderr,
         )
         import shutil
@@ -156,9 +153,7 @@ def run(args: Namespace) -> int:
             return 1
 
         # Get cache path
-        cache_path = cache.get_cache_path(
-            context.host, context.org, context.repo, issue_num
-        )
+        cache_path = cache.get_cache_path(context.host, context.org, context.repo, issue_num)
 
         # Initialize cache if it doesn't exist
         if not cache_path.exists():
@@ -194,12 +189,8 @@ def run(args: Namespace) -> int:
 
         # Print info before launching editor
         print(f"Editing: {note_path}")
-        print(
-            f"URL: https://{context.host}/{context.org}/{context.repo}/issues/{issue_num}"
-        )
-        print(
-            "Changes will be automatically synced to GitHub when you close the editor."
-        )
+        print(f"URL: https://{context.host}/{context.org}/{context.repo}/issues/{issue_num}")
+        print("Changes will be automatically synced to GitHub when you close the editor.")
         print()
 
         # Launch editor and block until it closes
@@ -226,9 +217,7 @@ def run(args: Namespace) -> int:
         update_issue(context.host, context.org, context.repo, issue_num, content)
 
         # Fetch updated metadata to get new timestamp
-        metadata = get_issue_metadata(
-            context.host, context.org, context.repo, issue_num
-        )
+        metadata = get_issue_metadata(context.host, context.org, context.repo, issue_num)
         updated_at = metadata.get("updated_at")
 
         if updated_at:
@@ -276,8 +265,7 @@ def edit_in_temp_file(content: str, editor: str) -> str | None:
             print(f"Error: Editor '{editor}' not found in PATH.", file=sys.stderr)
             if sys.platform == "win32":
                 print(
-                    "On Windows, common editors: 'code', 'notepad', 'vim' "
-                    "(try with .exe extension)",
+                    "On Windows, common editors: 'code', 'notepad', 'vim' (try with .exe extension)",
                     file=sys.stderr,
                 )
             return None

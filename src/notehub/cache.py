@@ -83,9 +83,7 @@ def is_dirty(cache_path: Path) -> bool:
     Returns:
         bool: True if there are uncommitted changes
     """
-    result = subprocess.run(
-        ["git", "status", "--porcelain"], cwd=cache_path, capture_output=True, text=True
-    )
+    result = subprocess.run(["git", "status", "--porcelain"], cwd=cache_path, capture_output=True, text=True)
     return bool(result.stdout.strip())
 
 
@@ -107,9 +105,7 @@ def commit_if_dirty(cache_path: Path, message: str | None = None) -> bool:
         timestamp = datetime.now().isoformat(timespec="seconds")
         message = f"Auto-commit at {timestamp}"
 
-    subprocess.run(
-        ["git", "add", "note.md"], cwd=cache_path, capture_output=True, check=True
-    )
+    subprocess.run(["git", "add", "note.md"], cwd=cache_path, capture_output=True, check=True)
     subprocess.run(
         ["git", "commit", "-m", message],
         cwd=cache_path,
@@ -173,9 +169,7 @@ def merge_from_github(cache_path: Path, content: str, issue_number: int) -> None
     (cache_path / "note.md").write_text(content, encoding="utf-8")
 
     # Add and commit
-    subprocess.run(
-        ["git", "add", "note.md"], cwd=cache_path, capture_output=True, check=True
-    )
+    subprocess.run(["git", "add", "note.md"], cwd=cache_path, capture_output=True, check=True)
 
     timestamp = datetime.now().isoformat(timespec="seconds")
     subprocess.run(

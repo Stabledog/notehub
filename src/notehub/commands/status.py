@@ -123,9 +123,7 @@ def get_local_repo_path() -> str | None:
     Returns:
         str: Absolute path to repo root, or None if not in a git repo
     """
-    result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True
-    )
+    result = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True)
 
     if result.returncode == 0:
         return result.stdout.strip()

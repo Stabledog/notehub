@@ -692,9 +692,7 @@ class TestMalformedUrls:
                 result.stdout = "origin"
             elif "remote" in cmd and "get-url" in cmd:
                 result.returncode = 0
-                result.stdout = (
-                    "git@github-enterprise.my-company.com:my_org/my-repo_v2.git"
-                )
+                result.stdout = "git@github-enterprise.my-company.com:my_org/my-repo_v2.git"
             else:
                 result.returncode = 1
                 result.stdout = ""

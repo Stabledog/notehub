@@ -180,9 +180,7 @@ class StoreContext:
             Actual hostname or None if not resolvable
         """
         try:
-            result = subprocess.run(
-                ["ssh", "-G", alias], capture_output=True, text=True, check=False
-            )
+            result = subprocess.run(["ssh", "-G", alias], capture_output=True, text=True, check=False)
             if result.returncode == 0:
                 # Parse output for "hostname" line
                 for line in result.stdout.split("\n"):
@@ -221,9 +219,7 @@ class StoreContext:
                         config_key = parts[0]
                         alias = parts[1]
 
-                        if config_key.startswith("url.") and config_key.endswith(
-                            ".insteadof"
-                        ):
+                        if config_key.startswith("url.") and config_key.endswith(".insteadof"):
                             base_url = config_key[4:-10]
 
                             if url.startswith(alias):

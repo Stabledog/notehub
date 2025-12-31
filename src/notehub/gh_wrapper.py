@@ -51,11 +51,7 @@ def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
         # For public GitHub, only use environment tokens if explicitly set for public GitHub
         if "GITHUB_TOKEN" in env:
             token = env["GITHUB_TOKEN"]
-        elif (
-            "GH_TOKEN" in env
-            and "GH_ENTERPRISE_TOKEN_2" not in env
-            and "GH_ENTERPRISE_TOKEN" not in env
-        ):
+        elif "GH_TOKEN" in env and "GH_ENTERPRISE_TOKEN_2" not in env and "GH_ENTERPRISE_TOKEN" not in env:
             # Only use GH_TOKEN for github.com if enterprise tokens aren't set
             token = env["GH_TOKEN"]
         # Otherwise: no explicit token, let gh use stored credentials
@@ -127,20 +123,14 @@ def _run_gh_command(
     """
     try:
         if capture_output:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, env=env, errors="replace"
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, env=env, errors="replace")
         else:
-            result = subprocess.run(
-                cmd, stdin=stdin, stdout=stdout, stderr=stderr, env=env
-            )
+            result = subprocess.run(cmd, stdin=stdin, stdout=stdout, stderr=stderr, env=env)
         return result
 
     except (UnicodeDecodeError, OSError) as e:
         # Handle encoding errors or network failures
-        error_msg = (
-            f"Cannot reach GitHub server at {host}. Check your network connection."
-        )
+        error_msg = f"Cannot reach GitHub server at {host}. Check your network connection."
         print(f"Error: {error_msg}", file=sys.stderr)
         print(f"Details: {str(e)}", file=sys.stderr)
         raise GhError(1, error_msg) from e
@@ -157,10 +147,7 @@ def _handle_gh_error(result: subprocess.CompletedProcess, host: str) -> None:
     stderr_lower = result.stderr.lower() if result.stderr else ""
 
     # Check for authentication-related errors
-    if any(
-        keyword in stderr_lower
-        for keyword in ["authentication", "credentials", "token", "401", "403"]
-    ):
+    if any(keyword in stderr_lower for keyword in ["authentication", "credentials", "token", "401", "403"]):
         print(f"\n❌ Authentication failed for {host}", file=sys.stderr)
         print(f"   Try: gh auth login --hostname {host}", file=sys.stderr)
         print("   Or:  export GH_ENTERPRISE_TOKEN=<token>", file=sys.stderr)
@@ -278,9 +265,7 @@ def get_issue(host: str, org: str, repo: str, issue_number: int) -> dict:
         raise GhError(result.returncode, result.stderr)
 
     if not result.stdout:
-        error_msg = (
-            f"No response from GitHub server at {host}. Check your network connection."
-        )
+        error_msg = f"No response from GitHub server at {host}. Check your network connection."
         print(error_msg, file=sys.stderr)
         raise GhError(1, error_msg)
 
@@ -309,9 +294,7 @@ def get_issue_metadata(host: str, org: str, repo: str, issue_number: int) -> dic
         GhError: If gh command fails
     """
     # Fetch only metadata fields
-    jq_filter = (
-        "{number: .number, title: .title, html_url: .html_url, updated_at: .updated_at}"
-    )
+    jq_filter = "{number: .number, title: .title, html_url: .html_url, updated_at: .updated_at}"
 
     base_cmd = [
         "gh",
@@ -329,9 +312,7 @@ def get_issue_metadata(host: str, org: str, repo: str, issue_number: int) -> dic
         raise GhError(result.returncode, result.stderr)
 
     if not result.stdout:
-        error_msg = (
-            f"No response from GitHub server at {host}. Check your network connection."
-        )
+        error_msg = f"No response from GitHub server at {host}. Check your network connection."
         print(error_msg, file=sys.stderr)
         raise GhError(1, error_msg)
 
@@ -392,9 +373,7 @@ def list_issues(
 
     # Ensure we have valid output before parsing
     if not result.stdout:
-        error_msg = (
-            f"No response from GitHub server at {host}. Check your network connection."
-        )
+        error_msg = f"No response from GitHub server at {host}. Check your network connection."
         print(error_msg, file=sys.stderr)
         raise GhError(1, error_msg)
 
@@ -469,9 +448,7 @@ def check_gh_installed() -> bool:
     return shutil.which("gh") is not None
 
 
-def ensure_label_exists(
-    host: str, org: str, repo: str, label_name: str, color: str, description: str = ""
-) -> bool:
+def ensure_label_exists(host: str, org: str, repo: str, label_name: str, color: str, description: str = "") -> bool:
     """
     Ensure a label exists in the repository, creating it if necessary.
 
@@ -529,9 +506,7 @@ def ensure_label_exists(
     return False
 
 
-def update_issue(
-    host: str, org: str, repo: str, issue_number: int, body: str
-) -> GhResult:
+def update_issue(host: str, org: str, repo: str, issue_number: int, body: str) -> GhResult:
     """
     Update issue body via gh issue edit.
 
@@ -567,6 +542,4 @@ def update_issue(
         print(result.stderr, file=sys.stderr)
         raise GhError(result.returncode, result.stderr)
 
-    return GhResult(
-        returncode=result.returncode, stdout=result.stdout, stderr=result.stderr
-    )
+    return GhResult(returncode=result.returncode, stdout=result.stdout, stderr=result.stderr)

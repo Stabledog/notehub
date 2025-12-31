@@ -180,9 +180,7 @@ def mock_gh_cli(mocker):
             mock_gh_cli(issue=sample_gh_issue)
     """
 
-    def _mock_gh(
-        issue=None, issue_list=None, auth_status="Logged in", username="testuser"
-    ):
+    def _mock_gh(issue=None, issue_list=None, auth_status="Logged in", username="testuser"):
         def gh_run_side_effect(*args, **kwargs):
             cmd = args[0] if args else kwargs.get("args", [])
 

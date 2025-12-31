@@ -120,14 +120,9 @@ class TestFormatNoteHeader:
         """Should format issue with long title without truncation."""
         issue = {
             "number": 1,
-            "title": (
-                "This is a very long title that exceeds normal length expectations"
-            ),
+            "title": ("This is a very long title that exceeds normal length expectations"),
         }
 
         result = format_note_header(issue)
 
-        assert (
-            result
-            == "[#1] This is a very long title that exceeds normal length expectations"
-        )
+        assert result == "[#1] This is a very long title that exceeds normal length expectations"

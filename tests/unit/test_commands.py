@@ -101,9 +101,7 @@ class TestEditInTempFile:
         mocker.patch("notehub.commands.edit.os.path.getmtime", side_effect=mtime_values)
 
         # Mock _prepare_editor_command to return a valid command
-        mocker.patch(
-            "notehub.commands.edit._prepare_editor_command", return_value=["vim"]
-        )
+        mocker.patch("notehub.commands.edit._prepare_editor_command", return_value=["vim"])
 
         # Mock subprocess.run to modify the file
         def mock_edit(*args, **kwargs):
@@ -227,21 +225,15 @@ class TestEditRun:
         mock_context.host = "github.com"
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
-        mocker.patch(
-            "notehub.commands.edit.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.edit.StoreContext.resolve", return_value=mock_context)
 
         # Mock note ident resolution
-        mocker.patch(
-            "notehub.commands.edit.resolve_note_ident", return_value=(42, None)
-        )
+        mocker.patch("notehub.commands.edit.resolve_note_ident", return_value=(42, None))
 
         # Mock cache operations
         cache_path = tmp_path / "cache"
         cache_path.mkdir()
-        mocker.patch(
-            "notehub.commands.edit.cache.get_cache_path", return_value=cache_path
-        )
+        mocker.patch("notehub.commands.edit.cache.get_cache_path", return_value=cache_path)
         mocker.patch(
             "notehub.commands.edit.cache.get_note_path",
             return_value=cache_path / "note.md",
@@ -250,26 +242,18 @@ class TestEditRun:
 
         # Mock editor
         mocker.patch("notehub.commands.edit.get_editor", return_value="vim")
-        mocker.patch(
-            "notehub.commands.edit._prepare_editor_command", return_value=["vim"]
-        )
-        mock_launch = mocker.patch(
-            "notehub.commands.edit._launch_editor_blocking", return_value=0
-        )
+        mocker.patch("notehub.commands.edit._prepare_editor_command", return_value=["vim"])
+        mock_launch = mocker.patch("notehub.commands.edit._launch_editor_blocking", return_value=0)
 
         # Mock auto-sync operations
         mocker.patch("notehub.commands.edit.cache.commit_if_dirty", return_value=False)
-        mocker.patch(
-            "notehub.commands.edit.cache.get_note_content", return_value="content"
-        )
+        mocker.patch("notehub.commands.edit.cache.get_note_content", return_value="content")
         mocker.patch("notehub.commands.edit.update_issue")
         mocker.patch(
             "notehub.commands.edit.get_issue_metadata",
             return_value={"updated_at": "2025-01-01T00:00:00Z"},
         )
-        mock_set_ts = mocker.patch(
-            "notehub.commands.edit.cache.set_last_known_updated_at"
-        )
+        mock_set_ts = mocker.patch("notehub.commands.edit.cache.set_last_known_updated_at")
 
         args = Namespace(note_ident="42")
         result = edit.run(args)
@@ -285,19 +269,13 @@ class TestEditRun:
         mock_context.host = "github.com"
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
-        mocker.patch(
-            "notehub.commands.edit.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.edit.StoreContext.resolve", return_value=mock_context)
 
-        mocker.patch(
-            "notehub.commands.edit.resolve_note_ident", return_value=(42, None)
-        )
+        mocker.patch("notehub.commands.edit.resolve_note_ident", return_value=(42, None))
 
         # Mock cache doesn't exist
         cache_path = tmp_path / "cache"
-        mocker.patch(
-            "notehub.commands.edit.cache.get_cache_path", return_value=cache_path
-        )
+        mocker.patch("notehub.commands.edit.cache.get_cache_path", return_value=cache_path)
 
         # Mock get_issue for cache init
         mock_issue = {"body": "content", "updated_at": "2025-01-01T00:00:00Z"}
@@ -311,24 +289,18 @@ class TestEditRun:
         )
 
         mocker.patch("notehub.commands.edit.get_editor", return_value="vim")
-        mocker.patch(
-            "notehub.commands.edit._prepare_editor_command", return_value=["vim"]
-        )
+        mocker.patch("notehub.commands.edit._prepare_editor_command", return_value=["vim"])
         mocker.patch("notehub.commands.edit._launch_editor_blocking", return_value=0)
 
         # Mock auto-sync operations
         mocker.patch("notehub.commands.edit.cache.commit_if_dirty", return_value=False)
-        mocker.patch(
-            "notehub.commands.edit.cache.get_note_content", return_value="content"
-        )
+        mocker.patch("notehub.commands.edit.cache.get_note_content", return_value="content")
         mocker.patch("notehub.commands.edit.update_issue")
         mocker.patch(
             "notehub.commands.edit.get_issue_metadata",
             return_value={"updated_at": "2025-01-01T00:00:00Z"},
         )
-        mock_set_ts2 = mocker.patch(
-            "notehub.commands.edit.cache.set_last_known_updated_at"
-        )
+        mock_set_ts2 = mocker.patch("notehub.commands.edit.cache.set_last_known_updated_at")
 
         args = Namespace(note_ident="42")
         result = edit.run(args)
@@ -344,18 +316,12 @@ class TestEditRun:
         mock_context.host = "github.com"
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
-        mocker.patch(
-            "notehub.commands.edit.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.edit.StoreContext.resolve", return_value=mock_context)
 
-        mocker.patch(
-            "notehub.commands.edit.resolve_note_ident", return_value=(42, None)
-        )
+        mocker.patch("notehub.commands.edit.resolve_note_ident", return_value=(42, None))
 
         cache_path = tmp_path / "cache"
-        mocker.patch(
-            "notehub.commands.edit.cache.get_cache_path", return_value=cache_path
-        )
+        mocker.patch("notehub.commands.edit.cache.get_cache_path", return_value=cache_path)
 
         # Empty body from GitHub
         mock_issue = {"body": "", "updated_at": "2025-01-01T00:00:00Z"}
@@ -369,9 +335,7 @@ class TestEditRun:
         )
 
         mocker.patch("notehub.commands.edit.get_editor", return_value="vim")
-        mocker.patch(
-            "notehub.commands.edit._prepare_editor_command", return_value=["vim"]
-        )
+        mocker.patch("notehub.commands.edit._prepare_editor_command", return_value=["vim"])
         mocker.patch("notehub.commands.edit._launch_editor_blocking", return_value=0)
 
         # Mock auto-sync operations
@@ -395,18 +359,12 @@ class TestEditRun:
         mock_context.host = "github.com"
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
-        mocker.patch(
-            "notehub.commands.edit.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.edit.StoreContext.resolve", return_value=mock_context)
 
-        mocker.patch(
-            "notehub.commands.edit.resolve_note_ident", return_value=(42, None)
-        )
+        mocker.patch("notehub.commands.edit.resolve_note_ident", return_value=(42, None))
 
         cache_path = tmp_path / "cache"
-        mocker.patch(
-            "notehub.commands.edit.cache.get_cache_path", return_value=cache_path
-        )
+        mocker.patch("notehub.commands.edit.cache.get_cache_path", return_value=cache_path)
 
         # None body from GitHub
         mock_issue = {"body": None, "updated_at": "2025-01-01T00:00:00Z"}
@@ -420,9 +378,7 @@ class TestEditRun:
         )
 
         mocker.patch("notehub.commands.edit.get_editor", return_value="vim")
-        mocker.patch(
-            "notehub.commands.edit._prepare_editor_command", return_value=["vim"]
-        )
+        mocker.patch("notehub.commands.edit._prepare_editor_command", return_value=["vim"])
         mocker.patch("notehub.commands.edit._launch_editor_blocking", return_value=0)
 
         # Mock auto-sync operations
@@ -443,13 +399,9 @@ class TestEditRun:
     def test_keyboard_interrupt_during_confirmation(self, mocker, capsys):
         """Should handle Ctrl+C gracefully."""
         mock_context = mocker.Mock()
-        mocker.patch(
-            "notehub.commands.edit.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.edit.StoreContext.resolve", return_value=mock_context)
 
-        mocker.patch(
-            "notehub.commands.edit.resolve_note_ident", return_value=(42, None)
-        )
+        mocker.patch("notehub.commands.edit.resolve_note_ident", return_value=(42, None))
 
         # Raise KeyboardInterrupt during cache operations
         mocker.patch(
@@ -467,9 +419,7 @@ class TestEditRun:
     def test_note_ident_resolution_failure(self, mocker, capsys):
         """Should handle note ident resolution error."""
         mock_context = mocker.Mock()
-        mocker.patch(
-            "notehub.commands.edit.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.edit.StoreContext.resolve", return_value=mock_context)
 
         # Return error from resolve_note_ident
         mocker.patch(
@@ -487,27 +437,17 @@ class TestEditRun:
     def test_gh_error_during_fetch(self, mocker, tmp_path):
         """Should handle GhError during cache initialization."""
         mock_context = mocker.Mock()
-        mocker.patch(
-            "notehub.commands.edit.StoreContext.resolve", return_value=mock_context
-        )
-        mocker.patch(
-            "notehub.commands.edit.resolve_note_ident", return_value=(42, None)
-        )
+        mocker.patch("notehub.commands.edit.StoreContext.resolve", return_value=mock_context)
+        mocker.patch("notehub.commands.edit.resolve_note_ident", return_value=(42, None))
 
         cache_path = tmp_path / "cache"
-        mocker.patch(
-            "notehub.commands.edit.cache.get_cache_path", return_value=cache_path
-        )
+        mocker.patch("notehub.commands.edit.cache.get_cache_path", return_value=cache_path)
 
         # Mock get_issue to raise GhError
-        mocker.patch(
-            "notehub.commands.edit.get_issue", side_effect=GhError(1, "API error")
-        )
+        mocker.patch("notehub.commands.edit.get_issue", side_effect=GhError(1, "API error"))
 
         # Mock get_issue to raise GhError
-        mocker.patch(
-            "notehub.commands.edit.get_issue", side_effect=GhError(1, "API error")
-        )
+        mocker.patch("notehub.commands.edit.get_issue", side_effect=GhError(1, "API error"))
 
         args = Namespace(note_ident="42")
         result = edit.run(args)
@@ -520,19 +460,13 @@ class TestEditRun:
         mock_context.host = "github.com"
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
-        mocker.patch(
-            "notehub.commands.edit.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.edit.StoreContext.resolve", return_value=mock_context)
 
-        mocker.patch(
-            "notehub.commands.edit.resolve_note_ident", return_value=(42, None)
-        )
+        mocker.patch("notehub.commands.edit.resolve_note_ident", return_value=(42, None))
 
         cache_path = tmp_path / "cache"
         cache_path.mkdir()
-        mocker.patch(
-            "notehub.commands.edit.cache.get_cache_path", return_value=cache_path
-        )
+        mocker.patch("notehub.commands.edit.cache.get_cache_path", return_value=cache_path)
 
         # Mock _ensure_cache_current to raise GhError
         mocker.patch(
@@ -548,24 +482,16 @@ class TestEditRun:
     def test_keyboard_interrupt_during_edit(self, mocker, capsys, tmp_path):
         """Should handle Ctrl+C during editor preparation."""
         mock_context = mocker.Mock()
-        mocker.patch(
-            "notehub.commands.edit.StoreContext.resolve", return_value=mock_context
-        )
-        mocker.patch(
-            "notehub.commands.edit.resolve_note_ident", return_value=(42, None)
-        )
+        mocker.patch("notehub.commands.edit.StoreContext.resolve", return_value=mock_context)
+        mocker.patch("notehub.commands.edit.resolve_note_ident", return_value=(42, None))
 
         cache_path = tmp_path / "cache"
         cache_path.mkdir()
-        mocker.patch(
-            "notehub.commands.edit.cache.get_cache_path", return_value=cache_path
-        )
+        mocker.patch("notehub.commands.edit.cache.get_cache_path", return_value=cache_path)
         mocker.patch("notehub.commands.edit._ensure_cache_current")
 
         # Mock get_editor to raise KeyboardInterrupt
-        mocker.patch(
-            "notehub.commands.edit.get_editor", side_effect=KeyboardInterrupt()
-        )
+        mocker.patch("notehub.commands.edit.get_editor", side_effect=KeyboardInterrupt())
 
         args = Namespace(note_ident="42")
         result = edit.run(args)
@@ -585,14 +511,10 @@ class TestAddRun:
         mock_context.host = "github.com"
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
-        mocker.patch(
-            "notehub.commands.add.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.add.StoreContext.resolve", return_value=mock_context)
 
         # Mock ensure_label_exists to succeed
-        mock_ensure = mocker.patch(
-            "notehub.commands.add.ensure_label_exists", return_value=True
-        )
+        mock_ensure = mocker.patch("notehub.commands.add.ensure_label_exists", return_value=True)
 
         # Mock create_issue to succeed
         mock_create = mocker.patch("notehub.commands.add.create_issue")
@@ -609,9 +531,7 @@ class TestAddRun:
             "FFC107",
             "Issues created by notehub CLI",
         )
-        mock_create.assert_called_once_with(
-            "github.com", "testorg", "testrepo", interactive=True, labels=["notehub"]
-        )
+        mock_create.assert_called_once_with("github.com", "testorg", "testrepo", interactive=True, labels=["notehub"])
 
     def test_label_creation_failure(self, mocker, capsys):
         """Should return error when label creation fails."""
@@ -619,9 +539,7 @@ class TestAddRun:
         mock_context.host = "github.com"
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
-        mocker.patch(
-            "notehub.commands.add.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.add.StoreContext.resolve", return_value=mock_context)
 
         # Mock ensure_label_exists to fail
         mocker.patch("notehub.commands.add.ensure_label_exists", return_value=False)
@@ -643,16 +561,12 @@ class TestAddRun:
         mock_context.host = "github.com"
         mock_context.org = "testorg"
         mock_context.repo = "testrepo"
-        mocker.patch(
-            "notehub.commands.add.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.add.StoreContext.resolve", return_value=mock_context)
 
         mocker.patch("notehub.commands.add.ensure_label_exists", return_value=True)
 
         # Mock create_issue to raise GhError
-        mocker.patch(
-            "notehub.commands.add.create_issue", side_effect=GhError(1, "API error")
-        )
+        mocker.patch("notehub.commands.add.create_issue", side_effect=GhError(1, "API error"))
 
         args = Namespace()
         result = add.run(args)
@@ -666,13 +580,9 @@ class TestAddRun:
         mock_context.host = "github.example.com"
         mock_context.org = "mycompany"
         mock_context.repo = "myproject"
-        mocker.patch(
-            "notehub.commands.add.StoreContext.resolve", return_value=mock_context
-        )
+        mocker.patch("notehub.commands.add.StoreContext.resolve", return_value=mock_context)
 
-        mock_ensure = mocker.patch(
-            "notehub.commands.add.ensure_label_exists", return_value=True
-        )
+        mock_ensure = mocker.patch("notehub.commands.add.ensure_label_exists", return_value=True)
         mock_create = mocker.patch("notehub.commands.add.create_issue")
 
         args = Namespace()

@@ -10,9 +10,7 @@ from .gh_wrapper import GhError, list_issues
 HELP_URL = "https://github.com/Stabledog/notehub/blob/main/notehub-help.md"
 
 
-def resolve_note_ident(
-    context: StoreContext, ident: str
-) -> tuple[int | None, str | None]:
+def resolve_note_ident(context: StoreContext, ident: str) -> tuple[int | None, str | None]:
     """
     Resolve note-ident to issue number.
 
@@ -31,9 +29,7 @@ def resolve_note_ident(
     else:
         # Title regex - fetch only number and title for matching
         try:
-            all_issues = list_issues(
-                context.host, context.org, context.repo, fields="number,title"
-            )
+            all_issues = list_issues(context.host, context.org, context.repo, fields="number,title")
 
             # Apply regex to titles (case-insensitive)
             pattern = re.compile(ident, re.IGNORECASE)
@@ -44,8 +40,7 @@ def resolve_note_ident(
 
             if len(matches) > 1:
                 print(
-                    f"Warning: '{ident}' matched {len(matches)} issues, "
-                    f"using first match",
+                    f"Warning: '{ident}' matched {len(matches)} issues, using first match",
                     file=sys.stderr,
                 )
 
