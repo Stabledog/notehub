@@ -107,11 +107,28 @@ def mock_git_commands(mocker):
         url="https://github.com/testorg/testrepo.git",
         in_git_repo=True,
         git_config=None,
+        current_branch="main",
     ):
         def git_run_side_effect(*args, **kwargs):
             cmd = args[0] if args else kwargs.get("args", [])
 
-            # Mock git remote get-url
+            # Mock git rev-parse --abbrev-ref HEAD (get current branch)
+            if "rev-parse" in cmd and "--abbrev-ref" in cmd and "HEAD" in cmd:
+                result = mocker.Mock()
+                result.returncode = 0 if in_git_repo else 128
+                result.stdout = current_branch if in_git_repo else ""
+                result.stderr = "" if in_git_repo else "Not a git repository"
+                return result
+
+            # Mock git config branch.<branch>.remote (get tracking remote)
+            if "config" in cmd and "branch." in cmd[-1] and ".remote" in cmd[-1]:
+                result = mocker.Mock()
+                result.returncode = 0 if in_git_repo else 1
+                result.stdout = remote if in_git_repo else ""
+                result.stderr = ""
+                return result
+
+            # Mock git remote get-url <remote>
             if "remote" in cmd and "get-url" in cmd:
                 result = mocker.Mock()
                 result.returncode = 0 if in_git_repo else 1

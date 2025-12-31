@@ -246,16 +246,51 @@ class StoreContext:
         return url
 
     @staticmethod
+    def _get_current_remote() -> str:
+        """
+        Get the remote name for the current branch.
+
+        Returns:
+            Remote name (e.g., 'origin', 'upstream') or 'origin' as fallback
+        """
+        try:
+            # First, try to get current branch name
+            result = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode == 0:
+                branch = result.stdout.strip()
+
+                # Get the remote for this branch
+                result = subprocess.run(
+                    ["git", "config", f"branch.{branch}.remote"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    return result.stdout.strip()
+        except FileNotFoundError:
+            pass
+
+        # Fallback to 'origin'
+        return "origin"
+
+    @staticmethod
     def _get_git_remote_host() -> Optional[str]:
         """
-        Extract host from git remote origin URL.
+        Extract host from git remote URL.
 
         Returns:
             Host (e.g., 'github.com') or None if not detectable
         """
         try:
+            remote = StoreContext._get_current_remote()
             result = subprocess.run(
-                ["git", "remote", "get-url", "origin"],
+                ["git", "remote", "get-url", remote],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -286,14 +321,15 @@ class StoreContext:
     @staticmethod
     def _get_git_remote_org() -> Optional[str]:
         """
-        Extract org from git remote origin URL.
+        Extract org from git remote URL.
 
         Returns:
             Organization name or None if not detectable
         """
         try:
+            remote = StoreContext._get_current_remote()
             result = subprocess.run(
-                ["git", "remote", "get-url", "origin"],
+                ["git", "remote", "get-url", remote],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -332,14 +368,15 @@ class StoreContext:
     @staticmethod
     def _get_git_remote_repo() -> Optional[str]:
         """
-        Extract repo name from git remote origin URL.
+        Extract repo name from git remote URL.
 
         Returns:
             Repository name or None if not detectable
         """
         try:
+            remote = StoreContext._get_current_remote()
             result = subprocess.run(
-                ["git", "remote", "get-url", "origin"],
+                ["git", "remote", "get-url", remote],
                 capture_output=True,
                 text=True,
                 check=False,

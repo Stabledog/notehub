@@ -28,20 +28,20 @@ j
     - Host:
         - --host|-h is top choice
         - GH_HOST environment variable
-        - auto-detect from local working copy unless -g|--global
+        - auto-detect from git remote (current branch's tracking remote, or 'origin') unless -g|--global
         - git config (global) custom key 'notehub.host'
         - 'github.com'
 
     - Org:
         - --org|-o [name] is top choice
-        - auto-detect from local working copy unless -g|--global
+        - auto-detect from git remote (current branch's tracking remote, or 'origin') unless -g|--global
         - Env 'NotehubOrg'
         - git config (global) 'notehub.org'
         - notehub.$USER ($USER being the user's shell environment value)
 
     - Repo:
         - -r|--repo flag (with special handling for '.')
-        - parsed from local git remote spec if in working copy unless -g|--global
+        - auto-detect from git remote (current branch's tracking remote, or 'origin') unless -g|--global
         - Env 'NotehubRepo'
         - git config custom key 'notehub.repo' ( skip if -g|--global)
         - git config (global) key 'notehub.repo'

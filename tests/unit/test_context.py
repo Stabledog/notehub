@@ -45,11 +45,24 @@ class TestStoreContextResolveHost:
         args = Namespace(org=None, repo=None)
         mocker.patch.dict("os.environ", {}, clear=True)
 
-        # Mock git remote get-url to return HTTPS URL
-        mock_result = mocker.Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "https://github.example.com/org/repo.git"
-        mocker.patch("subprocess.run", return_value=mock_result)
+        # Mock git commands: rev-parse (branch), config (remote), remote get-url
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "origin"
+            elif "remote" in cmd and "get-url" in cmd:
+                result.returncode = 0
+                result.stdout = "https://github.example.com/org/repo.git"
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
 
         context = StoreContext.resolve(args)
 
@@ -60,11 +73,24 @@ class TestStoreContextResolveHost:
         args = Namespace(org=None, repo=None)
         mocker.patch.dict("os.environ", {}, clear=True)
 
-        # Mock git remote get-url to return SSH URL
-        mock_result = mocker.Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "git@github.example.com:org/repo.git"
-        mocker.patch("subprocess.run", return_value=mock_result)
+        # Mock git commands: rev-parse (branch), config (remote), remote get-url
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "origin"
+            elif "remote" in cmd and "get-url" in cmd:
+                result.returncode = 0
+                result.stdout = "git@github.example.com:org/repo.git"
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
 
         context = StoreContext.resolve(args)
 
@@ -109,11 +135,24 @@ class TestStoreContextResolveOrg:
         args = Namespace(host=None, org=None, repo=None)
         mocker.patch.dict("os.environ", {}, clear=True)
 
-        # Mock git remote get-url
-        mock_result = mocker.Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "https://github.com/testorg/testrepo.git"
-        mocker.patch("subprocess.run", return_value=mock_result)
+        # Mock git commands for current remote detection
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "origin"
+            elif "remote" in cmd and "get-url" in cmd:
+                result.returncode = 0
+                result.stdout = "https://github.com/testorg/testrepo.git"
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
 
         context = StoreContext.resolve(args)
 
@@ -165,11 +204,24 @@ class TestStoreContextResolveRepo:
         args = Namespace(host=None, org=None, repo=".")
         mocker.patch.dict("os.environ", {}, clear=True)
 
-        # Mock git remote get-url
-        mock_result = mocker.Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "https://github.com/org/detectedrepo.git"
-        mocker.patch("subprocess.run", return_value=mock_result)
+        # Mock git commands for current remote detection
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "origin"
+            elif "remote" in cmd and "get-url" in cmd:
+                result.returncode = 0
+                result.stdout = "https://github.com/org/detectedrepo.git"
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
 
         context = StoreContext.resolve(args)
 
@@ -180,11 +232,24 @@ class TestStoreContextResolveRepo:
         args = Namespace(host=None, org=None, repo=None)
         mocker.patch.dict("os.environ", {}, clear=True)
 
-        # Mock git remote get-url
-        mock_result = mocker.Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "git@github.com:org/myproject.git"
-        mocker.patch("subprocess.run", return_value=mock_result)
+        # Mock git commands for current remote detection
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "origin"
+            elif "remote" in cmd and "get-url" in cmd:
+                result.returncode = 0
+                result.stdout = "git@github.com:org/myproject.git"
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
 
         context = StoreContext.resolve(args)
 
@@ -222,10 +287,23 @@ class TestGitRemoteParsing:
         args = Namespace(host=None, org=None, repo=None)
         mocker.patch.dict("os.environ", {}, clear=True)
 
-        mock_result = mocker.Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = url
-        mocker.patch("subprocess.run", return_value=mock_result)
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "origin"
+            elif "remote" in cmd and "get-url" in cmd:
+                result.returncode = 0
+                result.stdout = url
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
 
         context = StoreContext.resolve(args)
 
@@ -244,10 +322,23 @@ class TestGitRemoteParsing:
         args = Namespace(host=None, org=None, repo=None)
         mocker.patch.dict("os.environ", {}, clear=True)
 
-        mock_result = mocker.Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = url
-        mocker.patch("subprocess.run", return_value=mock_result)
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "origin"
+            elif "remote" in cmd and "get-url" in cmd:
+                result.returncode = 0
+                result.stdout = url
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
 
         context = StoreContext.resolve(args)
 
@@ -266,10 +357,23 @@ class TestGitRemoteParsing:
         args = Namespace(host=None, org=None, repo=None)
         mocker.patch.dict("os.environ", {}, clear=True)
 
-        mock_result = mocker.Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = url
-        mocker.patch("subprocess.run", return_value=mock_result)
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "origin"
+            elif "remote" in cmd and "get-url" in cmd:
+                result.returncode = 0
+                result.stdout = url
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
 
         context = StoreContext.resolve(args)
 
@@ -519,10 +623,23 @@ class TestMalformedUrls:
         args = Namespace(host=None, org=None, repo=None)
         mocker.patch.dict("os.environ", {"USER": "testuser"}, clear=True)
 
-        mock_result = mocker.Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "https://github.com/"  # Missing org/repo
-        mocker.patch("subprocess.run", return_value=mock_result)
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "origin"
+            elif "remote" in cmd and "get-url" in cmd:
+                result.returncode = 0
+                result.stdout = "https://github.com/"  # Missing org/repo
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
 
         context = StoreContext.resolve(args)
 
@@ -536,10 +653,23 @@ class TestMalformedUrls:
         args = Namespace(host=None, org=None, repo=None)
         mocker.patch.dict("os.environ", {"USER": "testuser"}, clear=True)
 
-        mock_result = mocker.Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "git@github.com"  # Missing :org/repo
-        mocker.patch("subprocess.run", return_value=mock_result)
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "origin"
+            elif "remote" in cmd and "get-url" in cmd:
+                result.returncode = 0
+                result.stdout = "git@github.com"  # Missing :org/repo
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
 
         context = StoreContext.resolve(args)
 
@@ -552,12 +682,25 @@ class TestMalformedUrls:
         args = Namespace(host=None, org=None, repo=None)
         mocker.patch.dict("os.environ", {}, clear=True)
 
-        mock_result = mocker.Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = (
-            "git@github-enterprise.my-company.com:my_org/my-repo_v2.git"
-        )
-        mocker.patch("subprocess.run", return_value=mock_result)
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "origin"
+            elif "remote" in cmd and "get-url" in cmd:
+                result.returncode = 0
+                result.stdout = (
+                    "git@github-enterprise.my-company.com:my_org/my-repo_v2.git"
+                )
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
 
         context = StoreContext.resolve(args)
 
@@ -570,10 +713,23 @@ class TestMalformedUrls:
         args = Namespace(host=None, org=None, repo=None)
         mocker.patch.dict("os.environ", {"USER": "testuser"}, clear=True)
 
-        mock_result = mocker.Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = ""  # Empty output
-        mocker.patch("subprocess.run", return_value=mock_result)
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "origin"
+            elif "remote" in cmd and "get-url" in cmd:
+                result.returncode = 0
+                result.stdout = ""  # Empty output
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
 
         context = StoreContext.resolve(args)
 
@@ -581,3 +737,127 @@ class TestMalformedUrls:
         assert context.host == "github.com"
         assert context.org == "testuser"
         assert context.repo == "notehub.default"
+
+
+class TestTrackingRemote:
+    """Tests for tracking remote detection."""
+
+    def test_uses_upstream_remote_when_configured(self, mocker):
+        """Should use 'upstream' remote when branch tracks it."""
+        args = Namespace(host=None, org=None, repo=None)
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "main"
+            elif "config" in cmd and "branch.main.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "upstream"  # Branch tracks 'upstream', not 'origin'
+            elif "remote" in cmd and "get-url" in cmd and "upstream" in cmd:
+                result.returncode = 0
+                result.stdout = "git@github.com:upstream-org/upstream-repo.git"
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
+
+        context = StoreContext.resolve(args)
+
+        # Should extract from 'upstream' remote, not 'origin'
+        assert context.host == "github.com"
+        assert context.org == "upstream-org"
+        assert context.repo == "upstream-repo"
+
+    def test_falls_back_to_origin_when_no_tracking_branch(self, mocker):
+        """Should fall back to 'origin' when branch has no tracking remote."""
+        args = Namespace(host=None, org=None, repo=None)
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "feature-branch"
+            elif "config" in cmd and "branch.feature-branch.remote" in cmd:
+                # No tracking remote configured
+                result.returncode = 1
+                result.stdout = ""
+            elif "remote" in cmd and "get-url" in cmd and "origin" in cmd:
+                result.returncode = 0
+                result.stdout = "git@github.com:origin-org/origin-repo.git"
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
+
+        context = StoreContext.resolve(args)
+
+        # Should fall back to 'origin' remote
+        assert context.org == "origin-org"
+        assert context.repo == "origin-repo"
+
+    def test_uses_fork_remote_when_configured(self, mocker):
+        """Should use 'fork' or other custom remote names."""
+        args = Namespace(host=None, org=None, repo=None)
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                result.returncode = 0
+                result.stdout = "dev"
+            elif "config" in cmd and "branch.dev.remote" in cmd:
+                result.returncode = 0
+                result.stdout = "fork"
+            elif "remote" in cmd and "get-url" in cmd and "fork" in cmd:
+                result.returncode = 0
+                result.stdout = "https://github.com/myuser/myforkedrepo.git"
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
+
+        context = StoreContext.resolve(args)
+
+        # Should use 'fork' remote
+        assert context.org == "myuser"
+        assert context.repo == "myforkedrepo"
+
+    def test_detached_head_falls_back_to_origin(self, mocker):
+        """Should fall back to 'origin' when in detached HEAD state."""
+        args = Namespace(host=None, org=None, repo=None)
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                # Detached HEAD returns a commit SHA
+                result.returncode = 0
+                result.stdout = "abc123def456"
+            elif "config" in cmd and "branch.abc123def456.remote" in cmd:
+                # No tracking remote for detached HEAD
+                result.returncode = 1
+                result.stdout = ""
+            elif "remote" in cmd and "get-url" in cmd and "origin" in cmd:
+                result.returncode = 0
+                result.stdout = "git@github.com:default-org/default-repo.git"
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
+
+        context = StoreContext.resolve(args)
+
+        # Should fall back to 'origin' remote
+        assert context.org == "default-org"
+        assert context.repo == "default-repo"
