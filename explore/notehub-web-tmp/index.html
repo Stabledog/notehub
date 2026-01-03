@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeMirror 6 + Vim Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #controls {
+      padding: 10px;
+      background: #f0f0f0;
+      border-bottom: 1px solid #ccc;
+    }
+    button {
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    #editor-container {
+      flex: 1;
+      overflow: auto;
+    }
+    .cm-editor {
+      height: 100%;
+    }
+    /* Visual mode selection highlighting */
+    .cm-selectionBackground {
+      background-color: #b4d5fe !important;
+    }
+    .cm-focused .cm-selectionBackground {
+      background-color: #4a90e2 !important;
+    }
+    /* Make cursor visible */
+    .cm-cursor {
+      border-left: 2px solid #000 !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <button id="save-btn">Save (logs to console)</button>
+    <span style="margin-left: 20px; color: #666;">Test jk→Esc: Enter insert mode (i), type 'j' then 'k' quickly</span>
+  </div>
+  <div id="editor-container"></div>
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
