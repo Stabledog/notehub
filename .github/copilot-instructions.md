@@ -1,21 +1,21 @@
 # Copilot instructions for Notehub
 
-Purpose
+## Purpose
 - Short guidance for Copilot/assistant contributions while developing Notehub — a CLI that stores notes as GitHub issues.
 
-Quick context
+## Quick context
 - Language: Python (3.8+)
 - Package: `src/notehub` with CLI entrypoints in `src/notehub/__main__.py` and `src/notehub/cli.py`
 - Tests: `tests/unit/` and `tests/integration/`
 - GitHub integration: uses the `gh` CLI; default repo name recommended: `notehub.default`
+- See `./notehub-help.md` for user guidance.
 
-Developer setup
+## Developer setup
 - Install editable dev environment:
 
 ```bash
 python -m pip install -e .[dev]
 ```
-
 - Install git hooks:
 
 ```bash
@@ -32,22 +32,13 @@ pytest tests/unit/
 - Run CLI locally:
 
 ```bash
-python -m notehub --help
-# or after install: notehub --help
+notehub --help
 ```
 
 Authentication & tokens
 - Prefer `gh auth login` for interactive auth.
-- Token environment variables (checked in order): `GH_ENTERPRISE_TOKEN_2`, `GH_ENTERPRISE_TOKEN`, `GITHUB_TOKEN`.
+- Token environment variables: `GH_ENTERPRISE_TOKEN_2`, `GH_ENTERPRISE_TOKEN`, `GITHUB_TOKEN`.
 
-Project defaults (git config)
-- Configure defaults so the CLI finds the target repo:
-
-```bash
-git config --global notehub.host github.com
-git config --global notehub.org <your-username>
-git config --global notehub.repo notehub.default
-```
 
 Windows notes
 - Use the Python installer from python.org (avoid MS Store).
@@ -74,18 +65,6 @@ Suggested assistant prompts
 Debugging & local checks
 - Ensure editable install and `gh auth login` succeeded, then run targeted tests:
 
-```bash
-pytest -k <testname>
-python -m notehub <command>
-```
-
-Files of interest
-- `README.md` — user and developer setup
-- `spec/` — feature design and notes
-- `src/notehub/` — implementation
-- `tests/` — test suites
-
-Next steps
-- If you want, I can run tests locally or commit this file. Tell me which you prefer.
-
-— End —
+Testing
+- All new or modified code must have tests.
+- Use mocks for external dependencies so that tests can run isolated without dependencies
