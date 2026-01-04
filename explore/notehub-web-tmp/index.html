@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CodeMirror 6 + Vim Test</title>
+  <title>CodeMirror 6 + Vim + Markdown</title>
   <style>
     * {
       margin: 0;
@@ -48,7 +48,9 @@
 <body>
   <div id="controls">
     <button id="save-btn">Save (logs to console)</button>
-    <span style="margin-left: 20px; color: #666;">Test jk→Esc: Enter insert mode (i), type 'j' then 'k' quickly</span>
+    <span style="margin-left: 20px; color: #666;">
+      Vim + Markdown Editor | Try: <code>jk</code>→Esc, <code>v</code>→visual, <code>yy</code>→yank, <code>p</code>→paste
+    </span>
   </div>
   <div id="editor-container"></div>
   <script type="module" src="/main.js"></script>

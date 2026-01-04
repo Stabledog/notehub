@@ -3,8 +3,10 @@ import { EditorState } from "@codemirror/state";
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import { Vim, vim, getCM } from "@replit/codemirror-vim";
+import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 
-// Enhanced theme for better visual mode visibility
+// Enhanced theme for better visual mode visibility and syntax highlighting
 const vimTheme = EditorView.theme({
   ".cm-selectionMatch": {
     backgroundColor: "#99ccff !important"
@@ -23,25 +25,118 @@ const vimTheme = EditorView.theme({
   }
 });
 
-// Initial content for testing
-const initialContent = `# CodeMirror 6 + Vim Mode Test
+// Markdown syntax highlighting theme
+const markdownHighlight = HighlightStyle.define([
+  { tag: tags.heading1, fontSize: "1.6em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.heading2, fontSize: "1.4em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.heading3, fontSize: "1.2em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.heading4, fontSize: "1.1em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.heading5, fontSize: "1.05em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.heading6, fontSize: "1em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.strong, fontWeight: "bold", color: "#24292f" },
+  { tag: tags.emphasis, fontStyle: "italic", color: "#24292f" },
+  { tag: tags.link, color: "#0969da", textDecoration: "underline" },
+  { tag: tags.monospace, 
+    fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace", 
+    backgroundColor: "#f6f8fa",
+    padding: "2px 4px",
+    borderRadius: "3px",
+    color: "#cf222e"
+  },
+  { tag: tags.url, color: "#0969da" },
+  { tag: tags.strikethrough, textDecoration: "line-through", color: "#656d76" },
+  { tag: tags.quote, color: "#656d76", fontStyle: "italic" },
+  { tag: tags.list, color: "#24292f" },
+  { tag: tags.contentSeparator, color: "#d0d7de", fontWeight: "bold" },
+]);
 
-## Testing jk → Esc
+// Initial content for testing - GitHub-flavored Markdown examples
+const initialContent = `# CodeMirror 6 + Vim + Markdown Syntax Highlighting
 
-1. Press 'i' to enter insert mode
-2. Type 'j' then 'k' quickly (within ~250ms)
-3. You should exit to normal mode
-4. If you pause after 'j', it inserts literally
+## Testing Vim with Markdown
 
-## Vim Commands to Test
+This demo showcases **syntax highlighting** for *GitHub-flavored Markdown* with full Vim editing support.
 
-- hjkl navigation (normal mode)
-- w, b, e word motions
-- dd, yy, p delete/yank/paste
-- / search
-- Visual mode with v
+### Vim Quick Reference
 
-Try editing this text!
+**Normal Mode Navigation:**
+- \`hjkl\` - move cursor
+- \`w\`, \`b\`, \`e\` - word motions  
+- \`0\`, \`$\` - line start/end
+- \`gg\`, \`G\` - file start/end
+
+**Editing:**
+- \`dd\` - delete line
+- \`yy\` - yank (copy) line
+- \`p\` / \`P\` - paste after/before
+- \`u\` - undo
+- \`Ctrl-r\` - redo
+
+**Modes:**
+- \`i\` - insert before cursor
+- \`a\` - insert after cursor
+- \`jk\` - custom mapping to exit insert mode
+- \`v\` - visual selection mode
+- \`Esc\` - return to normal mode
+
+### Markdown Features Being Highlighted
+
+#### Code Blocks
+
+Inline code like \`const x = 1\` and \`let y = 2\` should be highlighted.
+
+\`\`\`javascript
+function greet(name) {
+  return \`Hello, \${name}!\`;
+}
+\`\`\`
+
+\`\`\`python
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+\`\`\`
+
+#### Lists
+
+**Unordered:**
+- Item one
+- Item two
+  - Nested item
+  - Another nested item
+- Item three
+
+**Ordered:**
+1. First item
+2. Second item
+3. Third item
+
+#### Text Formatting
+
+- **Bold text** using double asterisks
+- *Italic text* using single asterisks  
+- ~~Strikethrough~~ using tildes
+- [Links to resources](https://codemirror.net)
+
+#### Blockquotes
+
+> This is a blockquote. It can span multiple lines
+> and should be styled differently from normal text.
+
+---
+
+## Try These Vim Commands
+
+1. Press \`i\` to enter **INSERT** mode
+2. Type \`jk\` quickly to return to normal mode (custom mapping)
+3. Use \`v\` for visual selection, then \`y\` to yank
+4. Use \`p\` to paste from system clipboard
+5. Try \`dd\` to delete a line, then \`u\` to undo
+
+### Edit This Content!
+
+Feel free to modify this markdown. All standard Vim commands work, and you'll see syntax highlighting update in real-time as you type.
 `;
 
 // Set up the jk → Esc mapping
@@ -62,6 +157,7 @@ const state = EditorState.create({
     drawSelection(),
     vimTheme,
     markdown(),
+    syntaxHighlighting(markdownHighlight),
     keymap.of([...defaultKeymap, indentWithTab]),
     EditorView.lineWrapping,
     // Prevent browser from stealing Tab key

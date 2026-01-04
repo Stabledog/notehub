@@ -209,6 +209,50 @@ Vim.map("<Leader>g", ":Git status<CR>", "normal")
 Vim.map("<Leader>g", "<Esc>:Git status<CR>", "insert")
 ```
 
+### Pattern: Markdown Editor with Syntax Highlighting
+
+```typescript
+import { EditorView, basicSetup } from 'codemirror'
+import { vim, getCM } from '@replit/codemirror-vim'
+import { markdown } from '@codemirror/lang-markdown'
+import { syntaxHighlighting, HighlightStyle } from '@codemirror/language'
+import { tags } from '@lezer/highlight'
+
+// GitHub-style markdown highlighting
+const markdownHighlight = HighlightStyle.define([
+  { tag: tags.heading1, fontSize: "1.6em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.heading2, fontSize: "1.4em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.heading3, fontSize: "1.2em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.strong, fontWeight: "bold" },
+  { tag: tags.emphasis, fontStyle: "italic" },
+  { tag: tags.link, color: "#0969da", textDecoration: "underline" },
+  { tag: tags.monospace, 
+    fontFamily: "monospace", 
+    backgroundColor: "#f6f8fa",
+    color: "#cf222e"
+  },
+])
+
+const view = new EditorView({
+  doc: '# GitHub Issue\n\n## Description\n\nEdit with **Vim** commands!',
+  extensions: [
+    vim(),
+    basicSetup,
+    markdown(),
+    syntaxHighlighting(markdownHighlight),
+    EditorView.lineWrapping,
+  ],
+  parent: document.getElementById('editor')
+})
+
+// Set up mode indicator
+const statusBar = document.getElementById('status')
+const cm = getCM(view)
+cm.on("vim-mode-change", ({ mode }) => {
+  statusBar.textContent = mode === "insert" ? "-- INSERT --" : ""
+})
+```
+
 ### Pattern: Option Toggle
 
 ```typescript

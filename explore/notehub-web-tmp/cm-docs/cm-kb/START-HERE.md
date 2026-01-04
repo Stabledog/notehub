@@ -44,6 +44,10 @@ User asks about...
 │  → [vim-mode.md](./vim-mode.md) for API list
 │  → [faq.md](./faq.md#q-are-all-cm5-vim-features-supported)
 │
+├─ "How do I add syntax highlighting / language support?"
+│  → [SYNTAX-HIGHLIGHTING.md](./SYNTAX-HIGHLIGHTING.md) for complete guide
+│  → [patterns.md](./patterns.md#language-support--syntax-highlighting) for quick patterns
+│
 └─ "Show me examples of X"
    → [examples.md](./examples.md)
    → [patterns.md](./patterns.md)
@@ -55,6 +59,7 @@ User asks about...
 |------|-------------|
 | [vim-mode.md](./vim-mode.md) | Complete Vim API reference |
 | [examples.md](./examples.md) | Need working code |
+| [SYNTAX-HIGHLIGHTING.md](./SYNTAX-HIGHLIGHTING.md) | Language support & syntax highlighting |
 | [architecture.md](./architecture.md) | Understanding relationships |
 | [troubleshooting.md](./troubleshooting.md) | Something's broken |
 | [faq.md](./faq.md) | Quick questions |

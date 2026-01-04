@@ -42,6 +42,146 @@ const view = new EditorView({
 
 **Rule**: Always place `vim()` before other keymap extensions.
 
+## Language Support & Syntax Highlighting
+
+### Available Language Packages
+
+CodeMirror 6 provides first-party language support packages:
+
+| Language | Package | Import |
+|----------|---------|--------|
+| JavaScript | `@codemirror/lang-javascript` | `import { javascript } from '@codemirror/lang-javascript'` |
+| TypeScript | `@codemirror/lang-javascript` | `javascript({ typescript: true })` |
+| JSX/TSX | `@codemirror/lang-javascript` | `javascript({ jsx: true })` |
+| Python | `@codemirror/lang-python` | `import { python } from '@codemirror/lang-python'` |
+| Markdown | `@codemirror/lang-markdown` | `import { markdown } from '@codemirror/lang-markdown'` |
+| HTML | `@codemirror/lang-html` | `import { html } from '@codemirror/lang-html'` |
+| CSS | `@codemirror/lang-css` | `import { css } from '@codemirror/lang-css'` |
+| JSON | `@codemirror/lang-json` | `import { json } from '@codemirror/lang-json'` |
+| XML | `@codemirror/lang-xml` | `import { xml } from '@codemirror/lang-xml'` |
+| SQL | `@codemirror/lang-sql` | `import { sql } from '@codemirror/lang-sql'` |
+
+**Complete list**: See https://codemirror.net/6/docs/ref/#language
+
+### Basic Language Setup
+
+```typescript
+import { EditorView, basicSetup } from 'codemirror'
+import { vim } from '@replit/codemirror-vim'
+import { markdown } from '@codemirror/lang-markdown'
+
+const view = new EditorView({
+  doc: '# Markdown heading\n\nSome **bold** text',
+  extensions: [
+    vim(),
+    basicSetup,
+    markdown(),  // Adds syntax highlighting + language features
+  ],
+  parent: element
+})
+```
+
+### Custom Syntax Highlighting Theme
+
+Create custom color schemes for syntax elements:
+
+```typescript
+import { syntaxHighlighting, HighlightStyle } from '@codemirror/language'
+import { tags } from '@lezer/highlight'
+
+const myHighlight = HighlightStyle.define([
+  { tag: tags.heading1, fontSize: "1.6em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.heading2, fontSize: "1.4em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.strong, fontWeight: "bold" },
+  { tag: tags.emphasis, fontStyle: "italic" },
+  { tag: tags.link, color: "#0969da", textDecoration: "underline" },
+  { tag: tags.monospace, 
+    fontFamily: "monospace", 
+    backgroundColor: "#f6f8fa",
+    color: "#cf222e"
+  },
+  { tag: tags.keyword, color: "#cf222e", fontWeight: "bold" },
+  { tag: tags.string, color: "#0a3069" },
+  { tag: tags.comment, color: "#6a737d", fontStyle: "italic" },
+])
+
+// Use in editor
+const view = new EditorView({
+  extensions: [
+    vim(),
+    markdown(),
+    syntaxHighlighting(myHighlight),
+  ]
+})
+```
+
+### Markdown with GitHub-Style Highlighting
+
+For GitHub issue editing or similar use cases:
+
+```typescript
+import { EditorView, basicSetup } from 'codemirror'
+import { vim } from '@replit/codemirror-vim'
+import { markdown } from '@codemirror/lang-markdown'
+import { syntaxHighlighting, HighlightStyle } from '@codemirror/language'
+import { tags } from '@lezer/highlight'
+
+// GitHub-inspired color palette
+const githubMarkdown = HighlightStyle.define([
+  { tag: tags.heading1, fontSize: "1.6em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.heading2, fontSize: "1.4em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.heading3, fontSize: "1.2em", fontWeight: "bold", color: "#0969da" },
+  { tag: tags.strong, fontWeight: "bold", color: "#24292f" },
+  { tag: tags.emphasis, fontStyle: "italic", color: "#24292f" },
+  { tag: tags.link, color: "#0969da", textDecoration: "underline" },
+  { tag: tags.monospace, 
+    fontFamily: "'Consolas', 'Monaco', monospace", 
+    backgroundColor: "#f6f8fa",
+    padding: "2px 4px",
+    borderRadius: "3px",
+    color: "#cf222e"
+  },
+  { tag: tags.strikethrough, textDecoration: "line-through", color: "#656d76" },
+  { tag: tags.quote, color: "#656d76", fontStyle: "italic" },
+  { tag: tags.list, color: "#24292f" },
+])
+
+const view = new EditorView({
+  doc: '# Issue Title\n\n## Description\n\nDetails here...',
+  extensions: [
+    vim(),
+    basicSetup,
+    markdown(),
+    syntaxHighlighting(githubMarkdown),
+    EditorView.lineWrapping,  // Recommended for prose
+  ],
+  parent: element
+})
+```
+
+**Note**: The `markdown()` extension provides:
+- Syntax parsing and highlighting structure
+- Code block language detection
+- Proper tokenization for formatting
+
+### Language-Specific Configuration
+
+Some languages accept configuration options:
+
+```typescript
+// TypeScript
+javascript({ typescript: true })
+
+// JSX
+javascript({ jsx: true })
+
+// Both TypeScript + JSX
+javascript({ typescript: true, jsx: true })
+
+// Python with specific dialect
+python()  // No special config needed
+```
+
 ### With Status Bar
 
 ```typescript

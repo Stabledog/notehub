@@ -4,6 +4,13 @@ Quick reference for navigating CodeMirror 5, CodeMirror 6, and CM6 Vim mode docu
 
 > **For LLMs**: See [START-HERE.md](./START-HERE.md) for navigation guidance.
 
+## What's New
+
+**Latest Addition** (Jan 2026): Comprehensive syntax highlighting documentation
+- 📄 [SYNTAX-HIGHLIGHTING.md](./SYNTAX-HIGHLIGHTING.md) - Complete guide to language support and custom themes
+- 🎨 GitHub-style markdown highlighting patterns
+- 💻 Working demo with Vim + Markdown
+
 ## Repository Structure
 
 ```mermaid
