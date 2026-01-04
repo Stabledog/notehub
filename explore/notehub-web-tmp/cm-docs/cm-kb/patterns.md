@@ -355,7 +355,91 @@ Vim.defineRegister('*', clipboardRegister)
 ```
 
 **⚠️ Important**: 
-- All register methods must be **synchronous** (no `async/await`)
+Usage: `"+yy` copies line to system clipboard
+
+Note: CM6‑Vim already provides `+`/`*` clipboard registers backed by the browser clipboard. Prefer using `"+y`/`"+p` rather than redefining these registers. Overriding `+` will fail with "Register already defined +" and is unsupported.
+
+Safe clipboard integration (examples)
+-----------------------------------
+When integrating with the system clipboard, follow two principles:
+
+1. Keep register methods synchronous (no `async`/`await`).
+2. Use user‑gesture handlers for reads, and provide an execCommand fallback for writes.
+
+Example — sync writes by intercepting pushText (yank):
+
+```typescript
+// Intercept register controller to mirror yanks to system clipboard
+const rc = Vim.getRegisterController()
+const origPush = rc.pushText.bind(rc)
+rc.pushText = function(name, op, text, linewise, block) {
+  const res = origPush(name, op, text, linewise, block)
+  if (op === 'yank') {
+    // Fire-and-forget write; may fail if document isn't focused
+    navigator.clipboard?.writeText(text).catch(() => {
+      // Fallback: textarea + execCommand('copy')
+      const t = document.createElement('textarea')
+      t.value = text
+      document.body.appendChild(t)
+      t.select()
+      document.execCommand('copy')
+      document.body.removeChild(t)
+    })
+  }
+  return res
+}
+```
+
+Example — paste from system clipboard on a real user keypress (keydown handler):
+
+```typescript
+// Run during an actual user keydown so clipboard.readText() is allowed
+document.addEventListener('keydown', async (e) => {
+  if (e.key !== 'p') return
+  // ensure editor focused and in normal mode, then read clipboard
+  const text = await navigator.clipboard.readText().catch(() => '')
+  if (text) {
+    const cm = getCM(view)
+    const cur = cm.getCursor()
+    cm.replaceRange(text, cur)
+    // update unnamed register
+    Vim.getRegisterController().getRegister('"').setText(text)
+  }
+}, true)
+```
+
+Deprecated pattern — DO NOT make register methods `async`
+------------------------------------------------------
+Register methods (`setText`, `pushText`, `toString`, `clear`) must be synchronous. Making them `async` (returning Promises) breaks the plugin because CM6‑Vim expects immediate return values from `toString()` and similar methods.
+
+❌ Wrong (breaks editor)
+```typescript
+const badRegister = {
+  async setText(text) {
+    await navigator.clipboard.writeText(text)
+  },
+  async toString() {
+    return await navigator.clipboard.readText()
+  }
+}
+Vim.defineRegister('+', badRegister)
+```
+
+✅ Right (synchronous methods, background async work)
+```typescript
+const goodRegister = {
+  text: '',
+  setText(text) {
+    this.text = text
+    navigator.clipboard.writeText(text).catch(() => {})
+  },
+  toString() {
+    navigator.clipboard.readText().then(t => { this.text = t }).catch(() => {})
+    return this.text
+  }
+}
+Vim.defineRegister('a', goodRegister)
+```
 - Use `.catch()` for clipboard API errors
 - First paste after external copy may require two attempts
 

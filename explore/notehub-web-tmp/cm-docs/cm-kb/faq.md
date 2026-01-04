@@ -290,7 +290,24 @@ const clipboardRegister = {
   }
 }
 
-Vim.defineRegister('+', clipboardRegister)
+Usage: `"+yy` (yank line to clipboard), `"+p` (paste from clipboard)
+
+Note: The `+` and `*` registers are implemented by CM6‑Vim and already integrate with the browser clipboard. Do not attempt to redefine them; use the register prefix (e.g. `"+yy` and `"+p`) or rely on the plugin's built‑in behavior.
+
+Permissions & focus
+-------------------
+Clipboard APIs may prompt for permission or be blocked if the document is not focused. To check permission state (when supported):
+
+```javascript
+navigator.permissions?.query({ name: 'clipboard-read' }).then(s => console.log('clipboard-read:', s.state))
+navigator.permissions?.query({ name: 'clipboard-write' }).then(s => console.log('clipboard-write:', s.state))
+```
+
+If reads are blocked, consider performing `navigator.clipboard.readText()` inside a user gesture (keydown/click) or use a paste key mapping that triggers a focusable user action.
+
+Deprecation note
+----------------
+Do not implement register methods as `async` functions. The VM expects register methods to be synchronous. If you need to interact with the async Clipboard API, perform the async work in the background (fire‑and‑forget) and return immediately from the register methods. See `patterns.md` for correct and incorrect examples.
 Vim.defineRegister('*', clipboardRegister)
 ```
 

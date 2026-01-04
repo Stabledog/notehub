@@ -328,6 +328,8 @@ const rc = Vim.getRegisterController()
 rc.getRegister('a').setText("hello")
 ```
 
+Note: CM6‑Vim already pre‑defines the `+` and `*` registers with system clipboard integration. Attempting to call `Vim.defineRegister('+', ...)` will throw an error like `Register already defined +` and should be avoided. Use the register prefix `"+` (or `"*`) to interact with the system clipboard.
+
 ---
 
 ### ❌ Editor completely broken after defining custom register
@@ -366,6 +368,34 @@ const goodRegister = {
     return this.text  // Must return string immediately
   }
 }
+
+---
+
+### ❌ Clipboard operations silently fail (NotAllowedError / Document not focused)
+
+**Symptoms**: `navigator.clipboard.readText()` or `writeText()` throws `NotAllowedError` or returns stale data; paste from system clipboard doesn't work.
+
+**Cause**: Browsers often require a user gesture and focused document for clipboard access. Clipboard permissions are granted per origin and may be ephemeral.
+
+**Solutions**:
+
+1. Ensure the page is focused before invoking clipboard APIs (click the page or the editor).
+2. Perform reads during a user gesture such as a `keydown` handler (see KB examples). Browsers are more permissive for clipboard actions triggered by explicit user events.
+3. Provide an execCommand fallback for writes (textarea + `document.execCommand('copy')`) for older/blocked contexts.
+4. Check the Permissions API to inspect current clipboard permission state.
+
+Example: perform paste on user keydown (grants read permission in many browsers)
+
+```javascript
+document.addEventListener('keydown', async (e) => {
+  if (e.key !== 'p') return
+  const text = await navigator.clipboard.readText().catch(() => '')
+  if (text) {
+    const cm = getCM(view)
+    cm.replaceRange(text, cm.getCursor())
+  }
+}, true)
+```
 ```
 
 ---

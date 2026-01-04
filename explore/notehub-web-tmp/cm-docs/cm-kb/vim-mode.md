@@ -264,6 +264,18 @@ Register object must implement:
 
 **Source**: [cm5/doc/manual.html#vimapi_defineRegister](../cm5/doc/manual.html) (line 3701)
 
+Note: The CM6‑Vim plugin already pre‑defines the `+` and `*` registers with system clipboard integration. The plugin writes to the system clipboard when text is pushed to the `+` register and reads from it when pasting from `+`. Calling `Vim.defineRegister('+', ...)` will fail with "Register already defined +" and is not supported. Use `"+y`/`"+p` (or `"*`) to interact with the system clipboard instead.
+
+Clipboard permissions and focus
+--------------------------------
+Browser clipboard reads/writes are subject to the platform security model. In particular:
+
+- `navigator.clipboard.readText()` and `writeText()` generally require a secure context (HTTPS or localhost).
+- Reads often require a user gesture and the document to be focused; writes may be blocked if the document is not focused.
+- The Permissions API can be used to query clipboard permission state (support varies by browser).
+
+Because of these constraints, clipboard integration in plugins should not rely on `async` register methods. Use the plugin's built‑in `+`/`*` registers when possible and provide user‑gesture fallbacks (for example, perform `readText()` during a `keydown` handler triggered by the user).
+
 ## Implementation Files
 
 | Component | File |
