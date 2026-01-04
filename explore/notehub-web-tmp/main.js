@@ -2,7 +2,7 @@ import { EditorView, keymap, drawSelection } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
-import { Vim, vim } from "@replit/codemirror-vim";
+import { Vim, vim, getCM } from "@replit/codemirror-vim";
 
 // Enhanced theme for better visual mode visibility
 const vimTheme = EditorView.theme({
@@ -48,56 +48,7 @@ Try editing this text!
 // This needs to be done via Vim.map() which handles timing
 Vim.map("jk", "<Esc>", "insert");
 
-// Set up system clipboard integration
-// Define custom registers that sync with the system clipboard
-const clipboardRegister = {
-  text: '',
-  
-  async setText(text) {
-    this.text = text;
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (err) {
-      console.error('Failed to write to clipboard:', err);
-    }
-  },
-  
-  async pushText(text) {
-    this.text += text;
-    try {
-      await navigator.clipboard.writeText(this.text);
-    } catch (err) {
-      console.error('Failed to write to clipboard:', err);
-    }
-  },
-  
-  clear() {
-    this.text = '';
-  },
-  
-  async toString() {
-    // When pasting, read from system clipboard
-    try {
-      const clipText = await navigator.clipboard.readText();
-      if (clipText) {
-        this.text = clipText;
-      }
-    } catch (err) {
-      console.error('Failed to read from clipboard:', err);
-    }
-    return this.text;
-  }
-};
-
-// Register as both + and * (standard Vim clipboard registers)
-Vim.defineRegister('+', clipboardRegister);
-Vim.defineRegister('*', clipboardRegister);
-
-// Make the unnamed register (default yank/paste) also use system clipboard
-// This way 'yy' and 'p' work with system clipboard without needing "+
-Vim.defineRegister('"', clipboardRegister);
-
-// Create the editor
+// Create the editor first, then set up clipboard after we have the cm instance
 const state = EditorState.create({
   doc: initialContent,
   extensions: [
@@ -152,3 +103,53 @@ if (savedContent) {
 
 // Log Vim mode changes for debugging
 Vim.defineOption("showmode", true, "boolean");
+
+// Set up clipboard sync using Vim events
+const cm = getCM(view);
+
+// Better approach: Intercept the register controller's pushText method
+// This is called every time text is yanked/deleted
+const registerController = Vim.getRegisterController();
+const originalPushText = registerController.pushText.bind(registerController);
+
+registerController.pushText = function(registerName, operator, text, linewise, blockwise) {
+  console.log('📋 Register pushText called:', {
+    registerName,
+    operator,
+    text: text?.substring(0, 50),
+    linewise,
+    blockwise
+  });
+  
+  // Call the original method first
+  const result = originalPushText(registerName, operator, text, linewise, blockwise);
+  
+  // If it's a yank operation (not delete), sync to clipboard
+  if (operator === 'yank') {
+    console.log('📋 Yank detected, syncing to clipboard');
+    
+    // Use execCommand fallback since clipboard API has focus issues
+    fallbackCopyToClipboard(text);
+  }
+  
+  return result;
+};
+
+// Fallback clipboard method using textarea + execCommand
+function fallbackCopyToClipboard(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    const success = document.execCommand('copy');
+    console.log(success ? '✓ Fallback copy successful' : '❌ Fallback copy failed');
+  } catch (err) {
+    console.error('❌ Fallback copy error:', err);
+  }
+  document.body.removeChild(textarea);
+}
+
+console.log('✓ Clipboard event listener registered');

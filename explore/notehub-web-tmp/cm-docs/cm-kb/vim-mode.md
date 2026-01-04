@@ -255,10 +255,12 @@ const rc = Vim.getRegisterController()
 Define a custom register.
 
 Register object must implement:
-- `setText(text)`
-- `pushText(text)`
-- `clear()`
-- `toString() → string`
+- `setText(text)` - **must be synchronous**
+- `pushText(text)` - **must be synchronous**
+- `clear()` - **must be synchronous**
+- `toString() → string` - **must be synchronous, must return string**
+
+**⚠️ Critical**: All methods must be synchronous. Do not use `async/await` or return Promises. For async operations (like clipboard access), use fire-and-forget pattern with `.catch()` for error handling.
 
 **Source**: [cm5/doc/manual.html#vimapi_defineRegister](../cm5/doc/manual.html) (line 3701)
 

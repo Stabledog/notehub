@@ -330,6 +330,46 @@ rc.getRegister('a').setText("hello")
 
 ---
 
+### ❌ Editor completely broken after defining custom register
+
+**Symptoms**: Editor blank/frozen after `Vim.defineRegister()`
+
+**Cause**: Register methods marked as `async` - Vim requires synchronous functions
+
+**Solution**: Remove `async/await`, use fire-and-forget pattern
+```typescript
+// ❌ WRONG - breaks editor
+const badRegister = {
+  async setText(text) {
+    await navigator.clipboard.writeText(text)
+  },
+  async toString() {
+    return await navigator.clipboard.readText()
+  }
+}
+
+// ✅ CORRECT - synchronous with background async
+const goodRegister = {
+  text: '',
+  setText(text) {
+    this.text = text
+    navigator.clipboard.writeText(text).catch(err => {
+      console.error('Clipboard error:', err)
+    })
+  },
+  toString() {
+    navigator.clipboard.readText().then(clip => {
+      this.text = clip
+    }).catch(err => {
+      console.error('Clipboard error:', err)
+    })
+    return this.text  // Must return string immediately
+  }
+}
+```
+
+---
+
 ## Performance Issues
 
 ### ❌ Editor is slow with Vim enabled

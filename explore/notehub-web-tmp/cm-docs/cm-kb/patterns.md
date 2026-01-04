@@ -321,12 +321,17 @@ const clipboardRegister = {
   
   setText(text) {
     this.text = text
-    navigator.clipboard.writeText(text)
+    // Fire-and-forget: don't await, handle errors
+    navigator.clipboard.writeText(text).catch(err => {
+      console.error('Clipboard write failed:', err)
+    })
   },
   
   pushText(text) {
     this.text += text
-    navigator.clipboard.writeText(this.text)
+    navigator.clipboard.writeText(this.text).catch(err => {
+      console.error('Clipboard write failed:', err)
+    })
   },
   
   clear() {
@@ -334,6 +339,13 @@ const clipboardRegister = {
   },
   
   toString() {
+    // MUST return string synchronously
+    // Update cache in background for next paste
+    navigator.clipboard.readText().then(clipText => {
+      if (clipText) this.text = clipText
+    }).catch(err => {
+      console.error('Clipboard read failed:', err)
+    })
     return this.text
   }
 }
@@ -341,6 +353,11 @@ const clipboardRegister = {
 Vim.defineRegister('+', clipboardRegister)
 Vim.defineRegister('*', clipboardRegister)
 ```
+
+**⚠️ Important**: 
+- All register methods must be **synchronous** (no `async/await`)
+- Use `.catch()` for clipboard API errors
+- First paste after external copy may require two attempts
 
 Usage: `"+yy` copies line to system clipboard
 

@@ -260,17 +260,32 @@ rc.getRegister('a').setText("hello")
 ```typescript
 const clipboardRegister = {
   text: '',
+  
   setText(text) {
     this.text = text
-    navigator.clipboard.writeText(text)
+    navigator.clipboard.writeText(text).catch(err => {
+      console.error('Clipboard write failed:', err)
+    })
   },
+  
   pushText(text) {
     this.text += text
+    navigator.clipboard.writeText(this.text).catch(err => {
+      console.error('Clipboard write failed:', err)
+    })
   },
+  
   clear() {
     this.text = ''
   },
+  
   toString() {
+    // Must be synchronous - return cached value
+    navigator.clipboard.readText().then(clipText => {
+      if (clipText) this.text = clipText
+    }).catch(err => {
+      console.error('Clipboard read failed:', err)
+    })
     return this.text
   }
 }
@@ -278,6 +293,8 @@ const clipboardRegister = {
 Vim.defineRegister('+', clipboardRegister)
 Vim.defineRegister('*', clipboardRegister)
 ```
+
+**⚠️ Note**: Register methods must be synchronous. Do not use `async/await`.
 
 Usage: `"+yy` (yank line to clipboard), `"+p` (paste from clipboard)
 
