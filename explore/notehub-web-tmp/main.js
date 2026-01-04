@@ -1,4 +1,4 @@
-import { EditorView, keymap } from "@codemirror/view";
+import { EditorView, keymap, drawSelection } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
@@ -53,6 +53,7 @@ const state = EditorState.create({
   doc: initialContent,
   extensions: [
     vim(),
+    drawSelection(),
     vimTheme,
     markdown(),
     keymap.of([...defaultKeymap, indentWithTab]),
