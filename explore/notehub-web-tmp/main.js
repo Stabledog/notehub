@@ -48,6 +48,12 @@ Try editing this text!
 // This needs to be done via Vim.map() which handles timing
 Vim.map("jk", "<Esc>", "insert");
 
+// Make plain p/P use the system clipboard (+ register) so external
+// copies paste into the editor without needing the register prefix
+Vim.map('p', '+p', 'normal');
+Vim.map('P', '+P', 'normal');
+Vim.map('p', '+p', 'visual');
+Vim.map('P', '+P', 'visual');
 // Create the editor first, then set up clipboard after we have the cm instance
 const state = EditorState.create({
   doc: initialContent,
@@ -153,3 +159,46 @@ function fallbackCopyToClipboard(text) {
 }
 
 console.log('✓ Clipboard event listener registered');
+
+// Handle physical keypresses for paste (read from system clipboard)
+// Browsers only allow clipboard.readText() during a user gesture (keydown),
+// so intercept real keydown events and perform the paste ourselves when
+// the editor is in normal mode and the user pressed 'p' or 'P'.
+document.addEventListener('keydown', async (e) => {
+  try {
+    // Only consider lower/upper p keys
+    if (e.key !== 'p' && e.key !== 'P') return;
+
+    // Ensure the event target is inside the editor DOM
+    if (!view.dom.contains(document.activeElement)) return;
+
+    // Only when Vim is in normal mode
+    const cmState = cm.state.vim || {};
+    if (cmState.mode !== 'normal') return;
+
+    // Prevent default handling and handle as a genuine user gesture
+    e.preventDefault();
+    const text = await navigator.clipboard.readText();
+    if (!text) return;
+
+    // Insert at cursor (p) or before cursor (P)
+    const cur = cm.getCursor();
+    if (e.key === 'p') {
+      cm.replaceRange(text, cur);
+    } else {
+      // For 'P' insert before the cursor position
+      cm.replaceRange(text, { line: cur.line, ch: cur.ch });
+    }
+
+    // Update unnamed register so subsequent vim operations see the text
+    try {
+      const rc = Vim.getRegisterController();
+      rc.getRegister('"').setText(text);
+    } catch (err) {
+      // Non-fatal if register update fails
+      console.warn('Failed to update unnamed register:', err);
+    }
+  } catch (err) {
+    console.error('Paste from clipboard failed:', err);
+  }
+}, true);
