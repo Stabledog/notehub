@@ -164,6 +164,21 @@ const view = new EditorView({
 - Code block language detection
 - Proper tokenization for formatting
 
+**Nested Code Block Highlighting**: Add `{ codeLanguages: languages }` to enable syntax highlighting inside fenced code blocks:
+
+```typescript
+import { markdown } from '@codemirror/lang-markdown'
+import { languages } from '@codemirror/language-data'
+
+const view = new EditorView({
+  extensions: [
+    vim(),
+    markdown({ codeLanguages: languages }),  // Syntax highlighting in code blocks
+    syntaxHighlighting(githubMarkdown),
+  ]
+})
+```
+
 ### Language-Specific Configuration
 
 Some languages accept configuration options:

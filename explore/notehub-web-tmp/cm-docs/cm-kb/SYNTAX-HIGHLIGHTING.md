@@ -216,6 +216,51 @@ const view = new EditorView({
 })
 ```
 
+### Nested Code Block Highlighting
+
+To enable syntax highlighting **inside** fenced code blocks, use the `codeLanguages` option:
+
+```typescript
+import { markdown } from '@codemirror/lang-markdown'
+import { languages } from '@codemirror/language-data'
+
+const view = new EditorView({
+  extensions: [
+    vim(),
+    markdown({ codeLanguages: languages }),  // Enable nested highlighting!
+    syntaxHighlighting(githubMarkdown),
+  ]
+})
+```
+
+Now your fenced code blocks will be highlighted according to their language tag:
+
+````markdown
+\`\`\`javascript
+function greet(name) {
+  return `Hello, ${name}!`;  // JS highlighting: keywords, strings, etc.
+}
+\`\`\`
+
+\`\`\`python
+def fibonacci(n):
+    if n <= 1:  # Python highlighting
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+\`\`\`
+````
+
+**What `@codemirror/language-data` provides:**
+- Lazy-loading parsers for 40+ languages
+- Automatic language detection from fence info string
+- Supports: JavaScript, TypeScript, Python, Java, C++, Rust, Go, PHP, Ruby, Shell, SQL, and many more
+- Languages are loaded on-demand only when needed
+
+**Installation:**
+```bash
+npm install @codemirror/language-data
+```
+
 ### Minimal Markdown Highlighting
 
 For simpler use cases:

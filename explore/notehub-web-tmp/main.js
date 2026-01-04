@@ -1,10 +1,11 @@
 import { EditorView, keymap, drawSelection } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
-import { markdown } from "@codemirror/lang-markdown";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { Vim, vim, getCM } from "@replit/codemirror-vim";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
+import { languages } from "@codemirror/language-data";
 
 // Enhanced theme for better visual mode visibility and syntax highlighting
 const vimTheme = EditorView.theme({
@@ -156,7 +157,7 @@ const state = EditorState.create({
     vim(),
     drawSelection(),
     vimTheme,
-    markdown(),
+    markdown({ codeLanguages: languages }),
     syntaxHighlighting(markdownHighlight),
     keymap.of([...defaultKeymap, indentWithTab]),
     EditorView.lineWrapping,
