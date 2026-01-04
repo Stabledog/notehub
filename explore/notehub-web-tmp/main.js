@@ -48,6 +48,55 @@ Try editing this text!
 // This needs to be done via Vim.map() which handles timing
 Vim.map("jk", "<Esc>", "insert");
 
+// Set up system clipboard integration
+// Define custom registers that sync with the system clipboard
+const clipboardRegister = {
+  text: '',
+  
+  async setText(text) {
+    this.text = text;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error('Failed to write to clipboard:', err);
+    }
+  },
+  
+  async pushText(text) {
+    this.text += text;
+    try {
+      await navigator.clipboard.writeText(this.text);
+    } catch (err) {
+      console.error('Failed to write to clipboard:', err);
+    }
+  },
+  
+  clear() {
+    this.text = '';
+  },
+  
+  async toString() {
+    // When pasting, read from system clipboard
+    try {
+      const clipText = await navigator.clipboard.readText();
+      if (clipText) {
+        this.text = clipText;
+      }
+    } catch (err) {
+      console.error('Failed to read from clipboard:', err);
+    }
+    return this.text;
+  }
+};
+
+// Register as both + and * (standard Vim clipboard registers)
+Vim.defineRegister('+', clipboardRegister);
+Vim.defineRegister('*', clipboardRegister);
+
+// Make the unnamed register (default yank/paste) also use system clipboard
+// This way 'yy' and 'p' work with system clipboard without needing "+
+Vim.defineRegister('"', clipboardRegister);
+
 // Create the editor
 const state = EditorState.create({
   doc: initialContent,
