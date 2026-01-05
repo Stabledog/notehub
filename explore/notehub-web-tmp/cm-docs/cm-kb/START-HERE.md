@@ -181,3 +181,10 @@ When referencing files:
 ❌ Teaching basic Vim usage (assume user knows Vim)
 ❌ Rewriting upstream documentation
 ❌ Non-Vim CodeMirror questions (point to CM6 docs)
+
+## Maintenance of the Knowledgebase (KB)
+
+- It is very important to keep the KB correct and up-to-date
+- If you find that it contains an error or is glaringly devoid of important information, volunteer to update it.
+- Do not assume that it is mature and fully tested.  It isn't.
+- Also be aware that the base material it draws on (the CM* and Vim canon) can also contain errors.  We won't update them, but we can and should annotate the KB if that occurs.

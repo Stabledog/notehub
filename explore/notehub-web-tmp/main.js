@@ -28,6 +28,7 @@ const vimTheme = EditorView.theme({
 
 // Markdown syntax highlighting theme
 const markdownHighlight = HighlightStyle.define([
+  // Markdown elements
   { tag: tags.heading1, fontSize: "1.6em", fontWeight: "bold", color: "#0969da" },
   { tag: tags.heading2, fontSize: "1.4em", fontWeight: "bold", color: "#0969da" },
   { tag: tags.heading3, fontSize: "1.2em", fontWeight: "bold", color: "#0969da" },
@@ -49,6 +50,29 @@ const markdownHighlight = HighlightStyle.define([
   { tag: tags.quote, color: "#656d76", fontStyle: "italic" },
   { tag: tags.list, color: "#24292f" },
   { tag: tags.contentSeparator, color: "#d0d7de", fontWeight: "bold" },
+  
+  // Code block syntax highlighting
+  { tag: tags.keyword, color: "#cf222e", fontWeight: "bold" },
+  { tag: tags.name, color: "#24292f" },
+  { tag: tags.deleted, color: "#82071e", backgroundColor: "#ffebe9" },
+  { tag: tags.inserted, color: "#116329", backgroundColor: "#dafbe1" },
+  { tag: tags.changed, color: "#953800", backgroundColor: "#ffd8b5" },
+  { tag: tags.invalid, color: "#f6f8fa", backgroundColor: "#82071e" },
+  { tag: tags.comment, color: "#6a737d", fontStyle: "italic" },
+  { tag: tags.string, color: "#0a3069" },
+  { tag: tags.regexp, color: "#116329" },
+  { tag: tags.escape, color: "#953800" },
+  { tag: [tags.special(tags.string), tags.processingInstruction], color: "#0550ae" },
+  { tag: tags.number, color: "#0550ae" },
+  { tag: tags.bool, color: "#0550ae" },
+  { tag: tags.className, color: "#953800" },
+  { tag: tags.typeName, color: "#953800" },
+  { tag: tags.propertyName, color: "#0550ae" },
+  { tag: tags.variableName, color: "#24292f" },
+  { tag: tags.function(tags.variableName), color: "#8250df" },
+  { tag: tags.definition(tags.variableName), color: "#953800" },
+  { tag: tags.operator, color: "#cf222e" },
+  { tag: tags.meta, color: "#6a737d" },
 ]);
 
 // Initial content for testing - GitHub-flavored Markdown examples
