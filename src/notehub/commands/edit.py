@@ -279,6 +279,11 @@ def edit_in_temp_file(content: str, editor: str) -> str | None:
             result = subprocess.run([*editor_cmd, tmp_path], shell=False)
         except (FileNotFoundError, OSError) as e:
             print(f"Error: Failed to run editor: {e}", file=sys.stderr)
+            if sys.platform == "win32":
+                print(
+                    "On Windows, common editors: 'code', 'notepad', 'vim' (try with .exe extension)",
+                    file=sys.stderr,
+                )
             return None
 
         # Check if editor failed

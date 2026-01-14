@@ -86,12 +86,17 @@ class TestEditInTempFile:
         """Should return modified content when file is changed."""
         # Create a real temp file to test modification detection
         test_file = tmp_path / "test.md"
-        test_file.write_text("original content")
 
         # Mock tempfile to return our test file
         mock_temp = mocker.Mock()
         mock_temp.name = str(test_file)
-        mock_temp.write = mocker.Mock()  # Mock write method
+
+        # Make write actually write to the file
+        def mock_write(content):
+            test_file.write_text(content)
+
+        mock_temp.write = mock_write
+
         mock_temp.__enter__ = mocker.Mock(return_value=mock_temp)
         mock_temp.__exit__ = mocker.Mock()
         mocker.patch("tempfile.NamedTemporaryFile", return_value=mock_temp)
@@ -169,7 +174,9 @@ class TestEditInTempFile:
         mocker.patch("tempfile.NamedTemporaryFile", return_value=mock_temp)
 
         mocker.patch("subprocess.run", side_effect=FileNotFoundError())
-        mocker.patch("sys.platform", "win32")
+        # Patch sys.platform in the edit module where it's actually used
+        mocker.patch("notehub.commands.edit.sys.platform", "win32")
+        mocker.patch("shutil.which", return_value="vi.exe")
 
         result = edit.edit_in_temp_file("content", "vi")
 
