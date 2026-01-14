@@ -84,15 +84,21 @@ Every notehub command requires a "store context" consisting of:
 
 1. **CLI flags**: `--host`, `--org`, `--repo`
    - Special: `--repo .` or `-r .` auto-detects repo from current git remote
-2. **Environment variables**: `NOTEHUB_HOST`, `NOTEHUB_ORG`, `NOTEHUB_REPO`
-3. **Auto-detect from git remote** (uses current branch's tracking remote, or 'origin')
-4. **Git config** (local unless `--global` flag used):
+2. **Environment variables**: `GH_HOST`, `NotehubOrg`, `NotehubRepo`
+3. **Local git config** (repository-specific `.git/config`, skipped with `--global` flag):
    ```bash
-   git config notehub.host github.com
-   git config notehub.org <your-username>
-   git config notehub.repo notehub.default
+   git config notehub.host github.example.com
+   git config notehub.org myteam
+   git config notehub.repo project-notes
    ```
-5. **Defaults**: Host defaults to `github.com`
+4. **Auto-detect from git remote** (uses current branch's tracking remote, or 'origin')
+5. **Global git config** (user-wide `~/.gitconfig`):
+   ```bash
+   git config --global notehub.host github.com
+   git config --global notehub.org <your-username>
+   git config --global notehub.repo notehub.default
+   ```
+6. **Defaults**: Host defaults to `github.com`, Org defaults to `$USER`, Repo defaults to `notehub.default`
 
 **Using current git repository:**
 ```bash

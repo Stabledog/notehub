@@ -61,18 +61,24 @@ class StoreContext:
         if env_host:
             return env_host
 
-        # 3. Auto-detect from git remote (unless --global)
+        # 3. Local git config notehub.host (unless --global)
+        if not global_only:
+            local_host = cls._get_git_config("notehub.host", global_only=False)
+            if local_host:
+                return local_host
+
+        # 4. Auto-detect from git remote (unless --global)
         if not global_only:
             remote_host = cls._get_git_remote_host()
             if remote_host:
                 return remote_host
 
-        # 4. git config --global notehub.host
+        # 5. git config --global notehub.host
         git_host = cls._get_git_config("notehub.host", global_only=True)
         if git_host:
             return git_host
 
-        # 5. Default to github.com
+        # 6. Default to github.com
         return "github.com"
 
     @classmethod
@@ -82,23 +88,29 @@ class StoreContext:
         if hasattr(args, "org") and args.org:
             return args.org
 
-        # 2. Auto-detect from git remote (unless --global)
+        # 2. Environment variable NotehubOrg
+        env_org = os.environ.get("NotehubOrg")
+        if env_org:
+            return env_org
+
+        # 3. Local git config notehub.org (unless --global)
+        if not global_only:
+            local_org = cls._get_git_config("notehub.org", global_only=False)
+            if local_org:
+                return local_org
+
+        # 4. Auto-detect from git remote (unless --global)
         if not global_only:
             remote_org = cls._get_git_remote_org()
             if remote_org:
                 return remote_org
 
-        # 3. Environment variable NotehubOrg
-        env_org = os.environ.get("NotehubOrg")
-        if env_org:
-            return env_org
-
-        # 4. git config --global notehub.org
+        # 5. git config --global notehub.org
         git_org = cls._get_git_config("notehub.org", global_only=True)
         if git_org:
             return git_org
 
-        # 5. Default to $USER
+        # 6. Default to $USER
         return os.environ.get("USER", "unknown-user")
 
     @classmethod
@@ -116,22 +128,22 @@ class StoreContext:
                 # Explicit repo name provided
                 return args.repo
 
-        # 2. Auto-detect from git remote (unless --global)
-        if not global_only:
-            remote_repo = cls._get_git_remote_repo()
-            if remote_repo:
-                return remote_repo
-
-        # 3. Environment variable NotehubRepo
+        # 2. Environment variable NotehubRepo
         env_repo = os.environ.get("NotehubRepo")
         if env_repo:
             return env_repo
 
-        # 4. git config notehub.repo (local unless --global)
+        # 3. Local git config notehub.repo (unless --global)
         if not global_only:
             local_repo = cls._get_git_config("notehub.repo", global_only=False)
             if local_repo:
                 return local_repo
+
+        # 4. Auto-detect from git remote (unless --global)
+        if not global_only:
+            remote_repo = cls._get_git_remote_repo()
+            if remote_repo:
+                return remote_repo
 
         # 5. git config --global notehub.repo
         global_repo = cls._get_git_config("notehub.repo", global_only=True)

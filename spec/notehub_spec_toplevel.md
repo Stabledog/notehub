@@ -15,7 +15,7 @@ A thin, opinionated wrapper over `gh` for fast note-taking using Github issues f
 - **Optional**: `fzf` for interactive pickers;
 
 ## Glossary
-j
+
 - "note-issue":
     - we're using github issues as notes, but this term removes ambiguity: "an issue which is being treated as a note"
     - implies that there may be only a subset of issues which are "note-issues" (filter criteria TBD version 2, v1 will not filter at all)
@@ -28,22 +28,24 @@ j
     - Host:
         - --host|-h is top choice
         - GH_HOST environment variable
+        - git config custom key 'notehub.host' (local, skip if -g|--global)
         - auto-detect from git remote (current branch's tracking remote, or 'origin') unless -g|--global
         - git config (global) custom key 'notehub.host'
         - 'github.com'
 
     - Org:
         - --org|-o [name] is top choice
-        - auto-detect from git remote (current branch's tracking remote, or 'origin') unless -g|--global
         - Env 'NotehubOrg'
+        - git config custom key 'notehub.org' (local, skip if -g|--global)
+        - auto-detect from git remote (current branch's tracking remote, or 'origin') unless -g|--global
         - git config (global) 'notehub.org'
         - notehub.$USER ($USER being the user's shell environment value)
 
     - Repo:
         - -r|--repo flag (with special handling for '.')
-        - auto-detect from git remote (current branch's tracking remote, or 'origin') unless -g|--global
         - Env 'NotehubRepo'
-        - git config custom key 'notehub.repo' ( skip if -g|--global)
+        - git config custom key 'notehub.repo' (local, skip if -g|--global)
+        - auto-detect from git remote (current branch's tracking remote, or 'origin') unless -g|--global
         - git config (global) key 'notehub.repo'
         - 'notehub.default' (literal repo name)
 
