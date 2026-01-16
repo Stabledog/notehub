@@ -3,11 +3,25 @@
 import re
 import sys
 
+try:
+    from importlib.metadata import version
+except ImportError:
+    # Python < 3.8 fallback
+    from importlib_metadata import version
+
 from .context import StoreContext
 from .gh_wrapper import GhError, list_issues
 
 # Help documentation URL
 HELP_URL = "https://github.com/Stabledog/notehub/blob/main/notehub-help.md"
+
+
+def get_version() -> str:
+    """Get the package version from package metadata."""
+    try:
+        return version("lm-notehub")
+    except Exception:
+        return "unknown"
 
 
 def resolve_note_ident(context: StoreContext, ident: str) -> tuple[int | None, str | None]:
