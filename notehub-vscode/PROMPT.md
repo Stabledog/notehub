@@ -15,7 +15,7 @@ Build a TypeScript VS Code extension that automates notehub workflow in VS Code 
 - Status bar button hardcoded to sync one specific note (#7) instead of syncing whatever note is active
 
 **Note File Structure:**
-- Notehub stores notes in: `.cache/notehub/{host}/{org}/{repo}/{issue}/note.md`
+- Notehub stores notes in: `~/.cache/notehub/{host}/{org}/{repo}/{issue}/note.md`
 - Example: `C:\Users\lmatheson4\.cache\notehub\bbgithub.dev.bloomberg.com\training-lmatheson4\compliance-monitor\8\note.md`
 - Notes reference other notes via embedded commands like: `nh edit -o training-materials -r cpp-monitor-project 24`
 
