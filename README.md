@@ -16,7 +16,7 @@ Using GitHub issues as general notes.
 3. **Authenticate:**
    ```bash
    gh auth login
-   j```
+   ```
 
 4. **Configure:**
    ```bash

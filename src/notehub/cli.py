@@ -85,7 +85,18 @@ def create_parser() -> argparse.ArgumentParser:
         help="Commit and push cache changes to GitHub",
         epilog=f"For details, see: {HELP_URL}#command-sync",
     )
-    sync_parser.add_argument("note_ident", metavar="NOTE-IDENT", help="Issue number or title regex")
+    sync_parser.add_argument(
+        "--cached",
+        "-c",
+        action="store_true",
+        help="Sync all cached notes with uncommitted changes (ignores NOTE-IDENT)",
+    )
+    sync_parser.add_argument(
+        "note_ident",
+        nargs="?",
+        metavar="NOTE-IDENT",
+        help="Issue number or title regex (required unless --cached is used)",
+    )
     add_store_arguments(sync_parser)
     sync_parser.set_defaults(handler=sync.run)
 

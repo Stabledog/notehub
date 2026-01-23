@@ -204,3 +204,58 @@ def get_note_path(cache_path: Path) -> Path:
         Path: Full path to note.md
     """
     return cache_path / "note.md"
+
+
+def find_all_cached_notes() -> list[tuple[str, str, str, int, Path]]:
+    """
+    Find all cached notes across all repos/orgs/hosts.
+
+    Walks the cache directory tree looking for issue cache directories.
+    Structure: {cache_root}/{host}/{org}/{repo}/{issue_number}/
+
+    Returns:
+        list: Tuples of (host, org, repo, issue_number, cache_path)
+    """
+    cache_root = get_cache_root()
+    results = []
+
+    if not cache_root.exists():
+        return results
+
+    # Use glob to find all .git directories matching our structure: host/org/repo/issue_number/.git
+    # This replaces 4 nested loops with a single glob pattern
+    for git_dir in cache_root.glob("*/*/*/*/.git"):
+        if not git_dir.is_dir():
+            continue
+
+        issue_dir = git_dir.parent
+        repo_dir = issue_dir.parent
+        org_dir = repo_dir.parent
+        host_dir = org_dir.parent
+
+        # Verify issue_number is actually a number
+        if not issue_dir.name.isdigit():
+            continue
+
+        results.append(
+            (
+                host_dir.name,
+                org_dir.name,
+                repo_dir.name,
+                int(issue_dir.name),
+                issue_dir,
+            )
+        )
+
+    return results
+
+
+def find_dirty_cached_notes() -> list[tuple[str, str, str, int, Path]]:
+    """
+    Find all cached notes with uncommitted changes.
+
+    Returns:
+        list: Tuples of (host, org, repo, issue_number, cache_path) for dirty notes only
+    """
+    all_notes = find_all_cached_notes()
+    return [note for note in all_notes if is_dirty(note[4])]

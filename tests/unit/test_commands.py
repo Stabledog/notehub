@@ -598,3 +598,181 @@ class TestAddRun:
         # Verify enterprise host was used
         assert mock_ensure.call_args[0][0] == "github.example.com"
         assert mock_create.call_args[0][0] == "github.example.com"
+
+
+class TestSyncCached:
+    """Tests for sync --cached functionality."""
+
+    def test_sync_cached_no_dirty_notes(self, mocker):
+        """Should display message when no dirty notes found."""
+        from notehub.commands import sync
+
+        mocker.patch("notehub.cache.find_dirty_cached_notes", return_value=[])
+
+        args = Namespace(cached=True, note_ident=None)
+        result = sync.run(args)
+
+        assert result == 0
+
+    def test_sync_cached_multiple_notes(self, mocker):
+        """Should sync all dirty notes across repos."""
+        from pathlib import Path
+
+        from notehub.commands import sync
+
+        # Mock dirty notes from different repos
+        dirty_notes = [
+            ("github.com", "org1", "repo1", 1, Path("/cache/1")),
+            ("github.com", "org1", "repo1", 2, Path("/cache/2")),
+            ("github.com", "org2", "repo2", 5, Path("/cache/5")),
+        ]
+        mocker.patch("notehub.cache.find_dirty_cached_notes", return_value=dirty_notes)
+        mocker.patch("notehub.cache.commit_if_dirty", return_value=True)
+        mocker.patch("notehub.cache.get_note_content", return_value="test content")
+        mock_update = mocker.patch("notehub.commands.sync.update_issue")
+        mocker.patch(
+            "notehub.commands.sync.get_issue_metadata",
+            return_value={"updated_at": "2024-01-01T00:00:00Z"},
+        )
+        mocker.patch("notehub.cache.set_last_known_updated_at")
+
+        args = Namespace(cached=True, note_ident=None)
+        result = sync.run(args)
+
+        assert result == 0
+        assert mock_update.call_count == 3
+
+    def test_sync_cached_handles_404(self, mocker, capsys):
+        """Should skip deleted issues with warning."""
+        from pathlib import Path
+
+        from notehub.commands import sync
+
+        dirty_notes = [
+            ("github.com", "org", "repo", 1, Path("/cache/1")),
+        ]
+        mocker.patch("notehub.cache.find_dirty_cached_notes", return_value=dirty_notes)
+        mocker.patch("notehub.cache.commit_if_dirty", return_value=True)
+        mocker.patch("notehub.cache.get_note_content", return_value="test content")
+
+        # Mock 404 error
+        mocker.patch(
+            "notehub.commands.sync.update_issue",
+            side_effect=GhError(1, "Not Found: 404"),
+        )
+
+        args = Namespace(cached=True, note_ident=None)
+        result = sync.run(args)
+
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Skipped - issue deleted on GitHub" in captured.out
+
+    def test_sync_cached_handles_other_errors(self, mocker, capsys):
+        """Should continue on errors and report failures."""
+        from pathlib import Path
+
+        from notehub.commands import sync
+
+        dirty_notes = [
+            ("github.com", "org", "repo", 1, Path("/cache/1")),
+            ("github.com", "org", "repo", 2, Path("/cache/2")),
+        ]
+        mocker.patch("notehub.cache.find_dirty_cached_notes", return_value=dirty_notes)
+        mocker.patch("notehub.cache.commit_if_dirty", return_value=True)
+        mocker.patch("notehub.cache.get_note_content", return_value="test content")
+
+        # First fails, second succeeds
+        mock_update = mocker.patch("notehub.commands.sync.update_issue")
+        mock_update.side_effect = [
+            GhError(1, "Permission denied"),
+            None,  # Success
+        ]
+        mocker.patch(
+            "notehub.commands.sync.get_issue_metadata",
+            return_value={"updated_at": "2024-01-01T00:00:00Z"},
+        )
+        mocker.patch("notehub.cache.set_last_known_updated_at")
+
+        args = Namespace(cached=True, note_ident=None)
+        result = sync.run(args)
+
+        assert result == 1  # Should return error code
+        captured = capsys.readouterr()
+        assert "Failed" in captured.err
+        assert "Synced 1 note(s)" in captured.out
+
+    def test_sync_cached_mixed_results(self, mocker):
+        """Should handle mix of success, 404, and other errors."""
+        from pathlib import Path
+
+        from notehub.commands import sync
+
+        dirty_notes = [
+            ("github.com", "org", "repo", 1, Path("/cache/1")),  # Success
+            ("github.com", "org", "repo", 2, Path("/cache/2")),  # 404
+            ("github.com", "org", "repo", 3, Path("/cache/3")),  # Error
+        ]
+        mocker.patch("notehub.cache.find_dirty_cached_notes", return_value=dirty_notes)
+        mocker.patch("notehub.cache.commit_if_dirty", return_value=True)
+        mocker.patch("notehub.cache.get_note_content", return_value="test content")
+
+        mock_update = mocker.patch("notehub.commands.sync.update_issue")
+        mock_update.side_effect = [
+            None,  # Success
+            GhError(1, "Not Found: 404"),
+            GhError(1, "API rate limit"),
+        ]
+        mocker.patch(
+            "notehub.commands.sync.get_issue_metadata",
+            return_value={"updated_at": "2024-01-01T00:00:00Z"},
+        )
+        mocker.patch("notehub.cache.set_last_known_updated_at")
+
+        args = Namespace(cached=True, note_ident=None)
+        result = sync.run(args)
+
+        assert result == 1  # Should fail due to error
+
+    def test_sync_requires_note_ident_without_cached(self, mocker, capsys):
+        """Should require note_ident when --cached is not used."""
+        from notehub.commands import sync
+
+        args = Namespace(cached=False, note_ident=None)
+        result = sync.run(args)
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "NOTE-IDENT is required" in captured.err
+
+    def test_sync_single_note_still_works(self, mocker):
+        """Should still support single-note sync without --cached."""
+        from pathlib import Path
+
+        from notehub.commands import sync
+
+        mock_context = mocker.Mock()
+        mock_context.host = "github.com"
+        mock_context.org = "org"
+        mock_context.repo = "repo"
+        mocker.patch("notehub.commands.sync.StoreContext.resolve", return_value=mock_context)
+        mocker.patch("notehub.commands.sync.resolve_note_ident", return_value=(1, None))
+
+        cache_path = Path("/cache/1")
+        mocker.patch("notehub.cache.get_cache_path", return_value=cache_path)
+        mocker.patch("pathlib.Path.exists", return_value=True)
+        mocker.patch("notehub.cache.commit_if_dirty", return_value=False)
+        mocker.patch("notehub.cache.get_note_content", return_value="content")
+        mock_update = mocker.patch("notehub.commands.sync.update_issue")
+        mocker.patch(
+            "notehub.commands.sync.get_issue_metadata",
+            return_value={"updated_at": "2024-01-01T00:00:00Z"},
+        )
+        mocker.patch("notehub.cache.set_last_known_updated_at")
+
+        args = Namespace(cached=False, note_ident="1")
+        result = sync.run(args)
+
+        assert result == 0
+        assert mock_update.call_count == 1
+
