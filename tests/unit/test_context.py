@@ -859,3 +859,126 @@ class TestTrackingRemote:
         # Should fall back to 'origin' remote
         assert context.org == "default-org"
         assert context.repo == "default-repo"
+
+
+class TestHostAliases:
+    """Tests for host alias expansion."""
+
+    def test_host_alias_gh_from_cli_flag(self, mocker):
+        """Should expand 'gh' alias to github.com from --host flag."""
+        args = Namespace(host="gh", org=None, repo=None)
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        mock_result = mocker.Mock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        context = StoreContext.resolve(args)
+
+        assert context.host == "github.com"
+
+    def test_host_alias_github_from_cli_flag(self, mocker):
+        """Should expand 'github' alias to github.com from --host flag."""
+        args = Namespace(host="github", org=None, repo=None)
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        mock_result = mocker.Mock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        context = StoreContext.resolve(args)
+
+        assert context.host == "github.com"
+
+    def test_host_alias_bbgh_from_cli_flag(self, mocker):
+        """Should expand 'bbgh' alias to bbgithub.dev.bloomberg.com from --host flag."""
+        args = Namespace(host="bbgh", org=None, repo=None)
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        mock_result = mocker.Mock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        context = StoreContext.resolve(args)
+
+        assert context.host == "bbgithub.dev.bloomberg.com"
+
+    def test_host_alias_bbgithub_from_cli_flag(self, mocker):
+        """Should expand 'bbgithub' alias to bbgithub.dev.bloomberg.com from --host flag."""
+        args = Namespace(host="bbgithub", org=None, repo=None)
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        mock_result = mocker.Mock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        context = StoreContext.resolve(args)
+
+        assert context.host == "bbgithub.dev.bloomberg.com"
+
+    def test_host_alias_case_insensitive(self, mocker):
+        """Should expand aliases case-insensitively."""
+        args = Namespace(host="GH", org=None, repo=None)
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        mock_result = mocker.Mock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        context = StoreContext.resolve(args)
+
+        assert context.host == "github.com"
+
+    def test_host_alias_from_environment(self, mocker):
+        """Should expand alias from GH_HOST environment variable."""
+        args = Namespace(host=None, org=None, repo=None)
+        mocker.patch.dict("os.environ", {"GH_HOST": "bbgh"}, clear=True)
+
+        mock_result = mocker.Mock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        context = StoreContext.resolve(args)
+
+        assert context.host == "bbgithub.dev.bloomberg.com"
+
+    def test_host_alias_from_git_config(self, mocker):
+        """Should expand alias from git config."""
+        args = Namespace(host=None, org=None, repo=None)
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        def mock_git_call(cmd, **kwargs):
+            result = mocker.Mock()
+            if "config" in cmd and "notehub.host" in cmd:
+                result.returncode = 0
+                result.stdout = "bbgithub"
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        mocker.patch("subprocess.run", side_effect=mock_git_call)
+
+        context = StoreContext.resolve(args)
+
+        assert context.host == "bbgithub.dev.bloomberg.com"
+
+    def test_non_alias_host_unchanged(self, mocker):
+        """Should leave non-alias hostnames unchanged."""
+        args = Namespace(host="custom.github.com", org=None, repo=None)
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        mock_result = mocker.Mock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        context = StoreContext.resolve(args)
+
+        assert context.host == "custom.github.com"

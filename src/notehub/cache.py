@@ -49,7 +49,10 @@ def init_cache(cache_path: Path, issue_number: int, content: str) -> None:
     cache_path.mkdir(parents=True, exist_ok=True)
 
     # Initialize git
-    subprocess.run(["git", "init"], cwd=cache_path, capture_output=True, check=True)
+    try:
+        subprocess.run(["git", "init"], cwd=cache_path, capture_output=True, check=True, text=True)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to initialize git repo in cache: {e.stderr}") from e
 
     # Create .gitignore
     gitignore_content = "*\n!note.md\n!.gitignore\n"
@@ -59,18 +62,27 @@ def init_cache(cache_path: Path, issue_number: int, content: str) -> None:
     (cache_path / "note.md").write_text(content, encoding="utf-8")
 
     # Initial commit
-    subprocess.run(
-        ["git", "add", ".gitignore", "note.md"],
-        cwd=cache_path,
-        capture_output=True,
-        check=True,
-    )
-    subprocess.run(
-        ["git", "commit", "-m", f"Cache created for issue {issue_number}"],
-        cwd=cache_path,
-        capture_output=True,
-        check=True,
-    )
+    try:
+        subprocess.run(
+            ["git", "add", ".gitignore", "note.md"],
+            cwd=cache_path,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to add files to git in cache: {e.stderr}") from e
+
+    try:
+        subprocess.run(
+            ["git", "commit", "-m", f"Cache created for issue {issue_number}"],
+            cwd=cache_path,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to create initial commit in cache: {e.stderr}") from e
 
 
 def is_dirty(cache_path: Path) -> bool:
@@ -105,13 +117,22 @@ def commit_if_dirty(cache_path: Path, message: str | None = None) -> bool:
         timestamp = datetime.now().isoformat(timespec="seconds")
         message = f"Auto-commit at {timestamp}"
 
-    subprocess.run(["git", "add", "note.md"], cwd=cache_path, capture_output=True, check=True)
-    subprocess.run(
-        ["git", "commit", "-m", message],
-        cwd=cache_path,
-        capture_output=True,
-        check=True,
-    )
+    try:
+        subprocess.run(["git", "add", "note.md"], cwd=cache_path, capture_output=True, check=True, text=True)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to add note.md to git in cache: {e.stderr}") from e
+
+    try:
+        subprocess.run(
+            ["git", "commit", "-m", message],
+            cwd=cache_path,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to commit changes in cache: {e.stderr}") from e
+
     return True
 
 
@@ -169,7 +190,10 @@ def merge_from_github(cache_path: Path, content: str, issue_number: int) -> None
     (cache_path / "note.md").write_text(content, encoding="utf-8")
 
     # Add and commit
-    subprocess.run(["git", "add", "note.md"], cwd=cache_path, capture_output=True, check=True)
+    try:
+        subprocess.run(["git", "add", "note.md"], cwd=cache_path, capture_output=True, check=True, text=True)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to add note.md to git in cache: {e.stderr}") from e
 
     timestamp = datetime.now().isoformat(timespec="seconds")
     subprocess.run(

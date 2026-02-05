@@ -80,17 +80,28 @@ Every notehub command requires a "store context" consisting of:
 - **Org**: Organization or user account name
 - **Repo**: Repository name
 
+**Host Aliases (for convenience):**
+
+For shorter command lines, you can use these built-in aliases instead of full hostnames:
+- `gh` or `github` → `github.com`
+- `bbgh` or `bbgithub` → `bbgithub.dev.bloomberg.com`
+
+Example: `notehub status -H bbgh` is the same as `notehub status -H bbgithub.dev.bloomberg.com`
+
 **Resolution hierarchy (in order):**
 
 1. **CLI flags**: `--host`, `--org`, `--repo`
    - Special: `--repo .` or `-r .` auto-detects repo from current git remote
+   - Host aliases (gh, github, bbgh, bbgithub) are expanded automatically
 2. **Environment variables**: `GH_HOST`, `NotehubOrg`, `NotehubRepo`
+   - Host aliases work here too
 3. **Local git config** (repository-specific `.git/config`, skipped with `--global` flag):
    ```bash
    git config notehub.host github.example.com
    git config notehub.org myteam
    git config notehub.repo project-notes
    ```
+   - Host aliases work in git config as well
 4. **Auto-detect from git remote** (uses current branch's tracking remote, or 'origin')
 5. **Global git config** (user-wide `~/.gitconfig`):
    ```bash

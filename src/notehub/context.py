@@ -8,6 +8,14 @@ import subprocess
 from argparse import Namespace
 from typing import Optional
 
+# Host aliases for convenience (not configurable)
+HOST_ALIASES = {
+    "gh": "github.com",
+    "github": "github.com",
+    "bbgh": "bbgithub.dev.bloomberg.com",
+    "bbgithub": "bbgithub.dev.bloomberg.com",
+}
+
 
 class StoreContext:
     """Resolved store context (host/org/repo)."""
@@ -54,18 +62,19 @@ class StoreContext:
         """Resolve host from args, git remote, config, or default."""
         # 1. --host flag
         if hasattr(args, "host") and args.host:
-            return args.host
+            # Expand alias if present
+            return HOST_ALIASES.get(args.host.lower(), args.host)
 
         # 2. GH_HOST environment variable
         env_host = os.environ.get("GH_HOST")
         if env_host:
-            return env_host
+            return HOST_ALIASES.get(env_host.lower(), env_host)
 
         # 3. Local git config notehub.host (unless --global)
         if not global_only:
             local_host = cls._get_git_config("notehub.host", global_only=False)
             if local_host:
-                return local_host
+                return HOST_ALIASES.get(local_host.lower(), local_host)
 
         # 4. Auto-detect from git remote (unless --global)
         if not global_only:
@@ -76,7 +85,7 @@ class StoreContext:
         # 5. git config --global notehub.host
         git_host = cls._get_git_config("notehub.host", global_only=True)
         if git_host:
-            return git_host
+            return HOST_ALIASES.get(git_host.lower(), git_host)
 
         # 6. Default to github.com
         return "github.com"

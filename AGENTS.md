@@ -243,20 +243,36 @@ All commands implement `run(args: Namespace) -> int` and return 0 for success, n
 
 **The most complex part of notehub**: determining `host`, `org`, `repo` from multiple sources.
 
+### Host Aliases
+
+**Built-in host aliases** for convenience (defined in `HOST_ALIASES` constant in [context.py](src/notehub/context.py)):
+- `gh` or `github` → `github.com`
+- `bbgh` or `bbgithub` → `bbgithub.dev.bloomberg.com`
+
+Aliases are:
+- **Case-insensitive**: `GH`, `Gh`, and `gh` all work
+- **Expanded automatically** at all resolution sources (CLI flags, env vars, git config)
+- **Not configurable**: hardcoded in the source (by design)
+- **Pass-through**: non-alias values are unchanged
+
+Example: `notehub status -H bbgh` expands to `notehub status -H bbgithub.dev.bloomberg.com`
+
 ### Resolution Hierarchy (Priority Order)
 
 Each component (host/org/repo) is resolved independently using this priority:
 
 1. **CLI flags**: `--host`, `--org`, `--repo`
    - Special: `--repo .` or `-r .` auto-detects from git remote
+   - **Host aliases expanded here**
 2. **Environment variables**: `GH_HOST`, `NotehubOrg`, `NotehubRepo`
+   - **Host aliases expanded here**
 3. **Local git config** (skipped with `--global` flag):
-   - `git config notehub.host`
+   - `git config notehub.host` (**host aliases expanded here**)
    - `git config notehub.org`
    - `git config notehub.repo`
 4. **Auto-detect from git remote** (current branch's tracking remote, or 'origin')
 5. **Global git config**:
-   - `git config --global notehub.host`
+   - `git config --global notehub.host` (**host aliases expanded here**)
    - `git config --global notehub.org`
    - `git config --global notehub.repo`
 6. **Defaults**:
