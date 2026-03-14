@@ -25,7 +25,7 @@ class GhResult:
 
 def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
     """
-    Prepare gh command using gh.sh wrapper (from gh-doctor dotkit).
+    Prepare gh command using gh.sh or ghe.sh wrapper (from gh-doctor dotkit).
 
     Delegates ALL auth/token/host logic to gh.sh/ghe.sh scripts.
     These scripts handle everything - we just call them.
@@ -42,11 +42,15 @@ def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
     # Set GH_HOST to target the correct GitHub instance
     env["GH_HOST"] = host
 
-    # Replace 'gh' with 'gh.sh' in the command
-    # gh.sh handles all auth, tokens, and host routing
+    # Replace 'gh' with appropriate wrapper:
+    # - gh.sh for github.com
+    # - ghe.sh for enterprise hosts
     cmd = base_cmd.copy()
     if cmd[0] == "gh":
-        cmd[0] = "gh.sh"
+        if host == "github.com":
+            cmd[0] = "gh.sh"
+        else:
+            cmd[0] = "ghe.sh"
 
     return cmd, env
 

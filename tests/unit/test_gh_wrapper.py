@@ -21,22 +21,31 @@ class TestPrepareGhCmd:
     """Tests for _prepare_gh_cmd function."""
 
     def test_sets_gh_host(self, mocker):
-        """Should set GH_HOST to target host."""
+        """Should set GH_HOST to target host and use ghe.sh for enterprise."""
         mocker.patch.dict("os.environ", {"GH_TOKEN": "test-token"}, clear=True)
 
         cmd, env = _prepare_gh_cmd("github.example.com", ["gh", "api", "user"])
 
         assert env["GH_HOST"] == "github.example.com"
-        assert cmd == ["gh.sh", "api", "user"]
+        assert cmd == ["ghe.sh", "api", "user"]
 
-    def test_converts_gh_to_gh_sh(self, mocker):
-        """Should convert 'gh' command to 'gh.sh'."""
+    def test_converts_gh_to_gh_sh_for_github_com(self, mocker):
+        """Should convert 'gh' command to 'gh.sh' for github.com."""
         mocker.patch.dict("os.environ", {}, clear=True)
 
         cmd, env = _prepare_gh_cmd("github.com", ["gh", "issue", "list"])
 
         assert cmd[0] == "gh.sh"
         assert cmd == ["gh.sh", "issue", "list"]
+
+    def test_converts_gh_to_ghe_sh_for_enterprise(self, mocker):
+        """Should convert 'gh' command to 'ghe.sh' for enterprise hosts."""
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        cmd, env = _prepare_gh_cmd("github.enterprise.com", ["gh", "issue", "list"])
+
+        assert cmd[0] == "ghe.sh"
+        assert cmd == ["ghe.sh", "issue", "list"]
 
     def test_preserves_environment(self, mocker):
         """Should preserve existing environment variables."""
@@ -59,13 +68,13 @@ class TestPrepareGhCmd:
         assert env["GH_HOST"] == "github.com"
 
     def test_enterprise_host_sets_gh_host(self, mocker):
-        """Should set GH_HOST for enterprise hosts."""
+        """Should set GH_HOST for enterprise hosts and use ghe.sh."""
         mocker.patch.dict("os.environ", {}, clear=True)
 
         cmd, env = _prepare_gh_cmd("github.enterprise.com", ["gh", "api", "user"])
 
         assert env["GH_HOST"] == "github.enterprise.com"
-        assert cmd == ["gh.sh", "api", "user"]
+        assert cmd == ["ghe.sh", "api", "user"]
 
 
 class TestBuildRepoArg:
