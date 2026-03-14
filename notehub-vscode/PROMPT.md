@@ -16,7 +16,7 @@ Build a TypeScript VS Code extension that automates notehub workflow in VS Code 
 
 **Note File Structure:**
 - Notehub stores notes in: `~/.cache/notehub/{host}/{org}/{repo}/{issue}/note.md`
-- Example: `C:\Users\lmatheson4\.cache\notehub\bbgithub.dev.bloomberg.com\training-lmatheson4\compliance-monitor\8\note.md`
+- Example: `C:\Users\username\.cache\notehub\github.enterprise.com\training-username\compliance-monitor\8\note.md`
 - Notes reference other notes via embedded commands like: `nh edit -o training-materials -r cpp-monitor-project 24`
 
 ## Requirements
@@ -54,8 +54,8 @@ Should become clickable and execute: `notehub edit -o trainkit -r gutscore 16`
   - Do not execute anything
 
 **Example:**
-- Active file: `C:\Users\lmatheson4\.cache\notehub\bbgithub.dev.bloomberg.com\training-lmatheson4\compliance-monitor\8\note.md`
-- Should execute: `notehub sync -H bbgithub.dev.bloomberg.com -o training-lmatheson4 -r compliance-monitor 8`
+- Active file: `C:\Users\username\.cache\notehub\github.enterprise.com\training-username\compliance-monitor\8\note.md`
+- Should execute: `notehub sync -H github.enterprise.com -o training-username -r compliance-monitor 8`
 
 ### 3. Terminal Behavior
 
@@ -151,9 +151,9 @@ To:
    - Check "Notehub" output channel for log entry
 
 2. **Sync active note test:**
-   - Open a file: `.cache/notehub/bbgithub.dev.bloomberg.com/training-lmatheson4/compliance-monitor/8/note.md`
+   - Open a file: `.cache/notehub/github.enterprise.com/training-username/compliance-monitor/8/note.md`
    - Invoke `notehub.syncActive` command
-   - Verify it executes `notehub sync -H bbgithub.dev.bloomberg.com -o training-lmatheson4 -r compliance-monitor 8`
+   - Verify it executes `notehub sync -H github.enterprise.com -o training-username -r compliance-monitor 8`
    - Check output channel for log entry
 
 3. **Error handling test:**

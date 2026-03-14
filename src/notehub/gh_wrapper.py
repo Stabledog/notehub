@@ -31,7 +31,7 @@ def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
     These scripts handle everything - we just call them.
 
     Args:
-        host: GitHub hostname (e.g., 'github.com' or 'bbgithub.dev.bloomberg.com')
+        host: GitHub hostname (e.g., 'github.com' or 'github.enterprise.com')
         base_cmd: Base gh command (e.g., ["gh", "api", "..."])
 
     Returns:

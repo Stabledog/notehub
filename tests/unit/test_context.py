@@ -423,7 +423,7 @@ url.https://enterprise.github.com/.insteadof work:"""
 
         mocker.patch("subprocess.run", side_effect=[mock_git_result, mock_ssh_result])
 
-        result = StoreContext._expand_git_url("bbgithub:org/repo.git")
+        result = StoreContext._expand_git_url("ghenterprise:org/repo.git")
 
         assert result == "git@github.enterprise.com:org/repo.git"
 
@@ -474,7 +474,7 @@ port 22
 identityfile ~/.ssh/id_rsa"""
         mocker.patch("subprocess.run", return_value=mock_result)
 
-        result = StoreContext._expand_ssh_host("bbgithub")
+        result = StoreContext._expand_ssh_host("ghenterprise")
 
         assert result == "github.enterprise.com"
 

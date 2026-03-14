@@ -186,7 +186,7 @@ class StoreContext:
         Resolve SSH host alias to actual hostname using SSH config.
 
         Args:
-            alias: SSH host alias (e.g., 'bbgithub')
+            alias: SSH host alias (e.g., 'ghenterprise')
 
         Returns:
             Actual hostname or None if not resolvable
@@ -241,7 +241,7 @@ class StoreContext:
 
         # If URL uses SSH short form (alias:org/repo), resolve via SSH config
         if ":" in url and "@" not in url and not url.startswith("https://"):
-            # Short form: bbgithub:org/repo
+            # Short form: ghenterprise:org/repo
             alias = url.split(":", 1)[0]
             path = url.split(":", 1)[1]
 
@@ -350,7 +350,7 @@ class StoreContext:
                 # Parse URL
                 # HTTPS: https://github.com/org/repo.git -> org
                 # SSH: git@github.com:org/repo.git -> org
-                # SCP-like: bbgithub:org/repo.git -> org
+                # SCP-like: ghenterprise:org/repo.git -> org
                 if url.startswith("https://"):
                     parts = url.split("//")
                     if len(parts) > 1:
@@ -363,7 +363,7 @@ class StoreContext:
                         # SSH format: git@github.com:org/repo.git
                         path = url.split(":")[1]
                     else:
-                        # SCP-like format: bbgithub:org/repo.git
+                        # SCP-like format: ghenterprise:org/repo.git
                         path = url.split(":", 1)[1]
 
                     org = path.split("/")[0]
@@ -397,7 +397,7 @@ class StoreContext:
                 # Parse URL - handle both HTTPS and SSH formats
                 # HTTPS: https://github.com/org/repo.git -> repo
                 # SSH: git@github.com:org/repo.git -> repo
-                # SCP-like: bbgithub:org/repo.git -> repo
+                # SCP-like: ghenterprise:org/repo.git -> repo
                 if url.startswith("https://"):
                     parts = url.split("//")
                     if len(parts) > 1:
@@ -411,7 +411,7 @@ class StoreContext:
                         # SSH format: git@github.com:org/repo.git
                         path = url.split(":")[1]
                     else:
-                        # SCP-like format: bbgithub:org/repo.git
+                        # SCP-like format: ghenterprise:org/repo.git
                         path = url.split(":", 1)[1]
 
                     # Extract repo from org/repo.git

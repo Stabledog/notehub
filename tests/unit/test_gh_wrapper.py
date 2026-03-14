@@ -62,9 +62,9 @@ class TestPrepareGhCmd:
         """Should set GH_HOST for enterprise hosts."""
         mocker.patch.dict("os.environ", {}, clear=True)
 
-        cmd, env = _prepare_gh_cmd("bbgithub.dev.bloomberg.com", ["gh", "api", "user"])
+        cmd, env = _prepare_gh_cmd("github.enterprise.com", ["gh", "api", "user"])
 
-        assert env["GH_HOST"] == "bbgithub.dev.bloomberg.com"
+        assert env["GH_HOST"] == "github.enterprise.com"
         assert cmd == ["gh.sh", "api", "user"]
 
 
