@@ -27,119 +27,45 @@ class TestPrepareGhCmd:
         cmd, env = _prepare_gh_cmd("github.example.com", ["gh", "api", "user"])
 
         assert env["GH_HOST"] == "github.example.com"
-        assert cmd == ["gh", "api", "user"]
+        assert cmd == ["gh.sh", "api", "user"]
 
-    def test_token_priority_enterprise_2(self, mocker):
-        """For github.com, should use GITHUB_TOKEN and ignore enterprise tokens."""
-        mocker.patch.dict(
-            "os.environ",
-            {
-                "GH_TOKEN": "token1",
-                "GH_ENTERPRISE_TOKEN": "token2",
-                "GH_ENTERPRISE_TOKEN_2": "token3",
-                "GITHUB_TOKEN": "token4",
-            },
-            clear=True,
-        )
-
-        cmd, env = _prepare_gh_cmd("github.com", ["gh", "api", "user"])
-
-        assert env["GH_TOKEN"] == "token4"
-        assert env["GH_ENTERPRISE_TOKEN"] == "token4"
-
-    def test_token_priority_enterprise(self, mocker):
-        """For github.com with only enterprise tokens, should remove them to use gh auth."""
-        mocker.patch.dict(
-            "os.environ",
-            {
-                "GH_ENTERPRISE_TOKEN": "token2",
-                "GH_ENTERPRISE_TOKEN_2": "token3",
-            },
-            clear=True,
-        )
-
-        cmd, env = _prepare_gh_cmd("github.com", ["gh", "api", "user"])
-
-        # Enterprise tokens removed for github.com, let gh use stored credentials
-        assert "GH_TOKEN" not in env
-        assert "GH_ENTERPRISE_TOKEN" not in env
-        assert "GH_ENTERPRISE_TOKEN_2" not in env
-        assert "GITHUB_TOKEN" not in env
-
-    def test_token_priority_gh_token(self, mocker):
-        """For github.com, should use GH_TOKEN only if no enterprise tokens present."""
-        mocker.patch.dict("os.environ", {"GH_TOKEN": "token1"}, clear=True)
-
-        cmd, env = _prepare_gh_cmd("github.com", ["gh", "api", "user"])
-
-        assert env["GH_TOKEN"] == "token1"
-        assert env["GH_ENTERPRISE_TOKEN"] == "token1"
-
-    def test_gh_token_ignored_with_enterprise_tokens(self, mocker):
-        """For github.com, GH_TOKEN should be ignored if enterprise tokens are present."""
-        mocker.patch.dict(
-            "os.environ",
-            {
-                "GH_TOKEN": "token1",
-                "GH_ENTERPRISE_TOKEN_2": "enterprise-token",
-            },
-            clear=True,
-        )
-
-        cmd, env = _prepare_gh_cmd("github.com", ["gh", "api", "user"])
-
-        # Should remove all tokens to let gh auth take over
-        assert "GH_TOKEN" not in env
-        assert "GH_ENTERPRISE_TOKEN" not in env
-        assert "GH_ENTERPRISE_TOKEN_2" not in env
-
-    def test_enterprise_host_token_priority(self, mocker):
-        """For enterprise hosts, should prioritize enterprise tokens over GITHUB_TOKEN."""
-        mocker.patch.dict(
-            "os.environ",
-            {
-                "GITHUB_TOKEN": "token1",
-                "GH_TOKEN": "token2",
-                "GH_ENTERPRISE_TOKEN": "token3",
-                "GH_ENTERPRISE_TOKEN_2": "token4",
-            },
-            clear=True,
-        )
-
-        cmd, env = _prepare_gh_cmd("github.enterprise.com", ["gh", "api", "user"])
-
-        # Enterprise host should prefer GH_ENTERPRISE_TOKEN_2
-        assert env["GH_TOKEN"] == "token4"
-        assert env["GH_ENTERPRISE_TOKEN"] == "token4"
-
-    def test_enterprise_host_with_only_github_token(self, mocker):
-        """For enterprise host with only GITHUB_TOKEN, should use gh auth instead."""
-        mocker.patch.dict(
-            "os.environ",
-            {
-                "GITHUB_TOKEN": "public-token",
-            },
-            clear=True,
-        )
-
-        cmd, env = _prepare_gh_cmd("github.enterprise.com", ["gh", "api", "user"])
-
-        # No appropriate token, let gh use stored credentials
-        assert "GH_TOKEN" not in env
-        assert "GH_ENTERPRISE_TOKEN" not in env
-        assert "GITHUB_TOKEN" not in env
-
-    def test_no_token_available(self, mocker):
-        """Should remove all token env vars when no token is set to use gh auth."""
+    def test_converts_gh_to_gh_sh(self, mocker):
+        """Should convert 'gh' command to 'gh.sh'."""
         mocker.patch.dict("os.environ", {}, clear=True)
 
+        cmd, env = _prepare_gh_cmd("github.com", ["gh", "issue", "list"])
+
+        assert cmd[0] == "gh.sh"
+        assert cmd == ["gh.sh", "issue", "list"]
+
+    def test_preserves_environment(self, mocker):
+        """Should preserve existing environment variables."""
+        mocker.patch.dict(
+            "os.environ",
+            {
+                "GH_TOKEN": "token1",
+                "GH_ENTERPRISE_TOKEN": "token2",
+                "GITHUB_TOKEN": "token3",
+            },
+            clear=True,
+        )
+
         cmd, env = _prepare_gh_cmd("github.com", ["gh", "api", "user"])
 
-        assert "GH_TOKEN" not in env
-        assert "GH_ENTERPRISE_TOKEN" not in env
-        assert "GH_ENTERPRISE_TOKEN_2" not in env
-        assert "GITHUB_TOKEN" not in env
+        # Env vars should be passed through unchanged - gh.sh handles auth
+        assert env["GH_TOKEN"] == "token1"
+        assert env["GH_ENTERPRISE_TOKEN"] == "token2"
+        assert env["GITHUB_TOKEN"] == "token3"
         assert env["GH_HOST"] == "github.com"
+
+    def test_enterprise_host_sets_gh_host(self, mocker):
+        """Should set GH_HOST for enterprise hosts."""
+        mocker.patch.dict("os.environ", {}, clear=True)
+
+        cmd, env = _prepare_gh_cmd("bbgithub.dev.bloomberg.com", ["gh", "api", "user"])
+
+        assert env["GH_HOST"] == "bbgithub.dev.bloomberg.com"
+        assert cmd == ["gh.sh", "api", "user"]
 
 
 class TestBuildRepoArg:
@@ -323,21 +249,18 @@ class TestGetGhUser:
 class TestCheckGhInstalled:
     """Tests for check_gh_installed function."""
 
-    def test_gh_installed(self, mocker):
-        """Should return True when gh is found."""
-        mocker.patch("shutil.which", return_value="/usr/bin/gh")
-
+    def test_always_returns_true(self):
+        """Should always return True - trusts dotkit setup."""
         result = check_gh_installed()
 
         assert result is True
 
-    def test_gh_not_installed(self, mocker):
-        """Should return False when gh is not found."""
-        mocker.patch("shutil.which", return_value=None)
-
+    def test_no_validation_performed(self):
+        """Should not perform any validation - fail fast approach."""
+        # Just verify it returns True without any checks
         result = check_gh_installed()
 
-        assert result is False
+        assert result is True
 
 
 class TestCreateIssue:
@@ -501,7 +424,7 @@ class TestUpdateIssue:
         assert result.stdout == "Issue updated"
 
     def test_update_issue_command_format(self, mocker):
-        """Should format gh issue edit command correctly."""
+        """Should format gh.sh issue edit command correctly."""
         from notehub.gh_wrapper import update_issue
 
         mock_result = mocker.Mock()
@@ -513,7 +436,7 @@ class TestUpdateIssue:
         update_issue("github.com", "testorg", "testrepo", 123, "Updated body")
 
         call_args = mock_run.call_args[0][0]
-        assert "gh" in call_args
+        assert "gh.sh" in call_args
         assert "issue" in call_args
         assert "edit" in call_args
         assert "123" in call_args
@@ -537,49 +460,8 @@ class TestUpdateIssue:
         assert "Issue not found" in exc_info.value.stderr
 
 
-class TestHandleGhError:
-    """Tests for _handle_gh_error function."""
-
-    def test_authentication_error_detection(self, mocker, capsys):
-        """Should detect and print helpful message for auth errors."""
-        from notehub.gh_wrapper import _handle_gh_error
-
-        mock_result = mocker.Mock()
-        mock_result.returncode = 1
-        mock_result.stderr = "HTTP 401: Bad credentials (authentication)"
-
-        _handle_gh_error(mock_result, "github.com")
-
-        captured = capsys.readouterr()
-        assert "Authentication failed" in captured.err
-        assert "gh auth login" in captured.err
-
-    def test_403_error_detection(self, mocker, capsys):
-        """Should detect 403 forbidden errors."""
-        from notehub.gh_wrapper import _handle_gh_error
-
-        mock_result = mocker.Mock()
-        mock_result.returncode = 1
-        mock_result.stderr = "HTTP 403: Forbidden"
-
-        _handle_gh_error(mock_result, "github.example.com")
-
-        captured = capsys.readouterr()
-        assert "Authentication failed" in captured.err
-        assert "github.example.com" in captured.err
-
-    def test_non_auth_error_no_output(self, mocker, capsys):
-        """Should not print anything for non-auth errors."""
-        from notehub.gh_wrapper import _handle_gh_error
-
-        mock_result = mocker.Mock()
-        mock_result.returncode = 1
-        mock_result.stderr = "Not found"
-
-        _handle_gh_error(mock_result, "github.com")
-
-        captured = capsys.readouterr()
-        assert captured.err == ""
+# TestHandleGhError removed - _handle_gh_error function no longer exists
+# Error handling is now delegated to gh.sh which provides its own error messages
 
 
 class TestRunGhCommand:
@@ -602,31 +484,8 @@ class TestRunGhCommand:
         # Check that errors='replace' is passed
         assert mock_run.call_args[1]["errors"] == "replace"
 
-    def test_handles_unicode_error(self, mocker, capsys):
-        """Should catch UnicodeDecodeError and raise GhError with nice message."""
-        mock_run = mocker.patch("notehub.gh_wrapper.subprocess.run")
-        mock_run.side_effect = UnicodeDecodeError("utf-8", b"", 0, 1, "invalid")
-
-        with pytest.raises(GhError) as exc_info:
-            _run_gh_command(["gh", "api", "user"], {}, "github.com")
-
-        assert exc_info.value.returncode == 1
-        captured = capsys.readouterr()
-        assert "Cannot reach GitHub server at github.com" in captured.err
-        assert "Check your network connection" in captured.err
-
-    def test_handles_os_error(self, mocker, capsys):
-        """Should catch OSError (network issues) and raise GhError with nice message."""
-        mock_run = mocker.patch("notehub.gh_wrapper.subprocess.run")
-        mock_run.side_effect = OSError("Network unreachable")
-
-        with pytest.raises(GhError) as exc_info:
-            _run_gh_command(["gh", "api", "user"], {}, "github.example.com")
-
-        assert exc_info.value.returncode == 1
-        captured = capsys.readouterr()
-        assert "Cannot reach GitHub server at github.example.com" in captured.err
-        assert "Check your network connection" in captured.err
+    # Error handling tests removed - we now fail fast and don't catch errors
+    # gh.sh provides its own error messages
 
     def test_passthrough_mode(self, mocker):
         """Should handle passthrough mode without capture_output."""

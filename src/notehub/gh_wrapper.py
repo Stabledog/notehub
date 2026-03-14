@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -26,67 +25,28 @@ class GhResult:
 
 def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
     """
-    Prepare gh command with proper hostname and auth environment.
+    Prepare gh command using gh.sh wrapper (from gh-doctor dotkit).
 
-    Mimics the gh_enterprise wrapper pattern:
-    - For github.com: Prefers GITHUB_TOKEN → GH_TOKEN → gh auth stored credentials
-    - For enterprise hosts: Prefers GH_ENTERPRISE_TOKEN_2 → GH_ENTERPRISE_TOKEN → gh auth stored credentials
-    - Only sets token env vars if explicitly provided (otherwise uses gh auth)
-    - Sets GH_HOST to target the correct GitHub instance
-    - Sets GIT_EDITOR from EDITOR for gh's benefit
+    Delegates ALL auth/token/host logic to gh.sh/ghe.sh scripts.
+    These scripts handle everything - we just call them.
 
     Args:
-        host: GitHub hostname (e.g., 'github.com' or 'my.github.com')
+        host: GitHub hostname (e.g., 'github.com' or 'bbgithub.dev.bloomberg.com')
         base_cmd: Base gh command (e.g., ["gh", "api", "..."])
 
     Returns:
-        tuple: (command, environment dict)
+        tuple: (command as list, environment dict)
     """
     env = os.environ.copy()
-
-    # Check if explicit token is provided for this host
-    # If no explicit token, let gh use its stored credentials
-    token = None
-    if host == "github.com":
-        # For public GitHub, only use environment tokens if explicitly set for public GitHub
-        if "GITHUB_TOKEN" in env:
-            token = env["GITHUB_TOKEN"]
-        elif "GH_TOKEN" in env and "GH_ENTERPRISE_TOKEN_2" not in env and "GH_ENTERPRISE_TOKEN" not in env:
-            # Only use GH_TOKEN for github.com if enterprise tokens aren't set
-            token = env["GH_TOKEN"]
-        # Otherwise: no explicit token, let gh use stored credentials
-    else:
-        # For enterprise hosts, check enterprise tokens
-        if "GH_ENTERPRISE_TOKEN_2" in env:
-            token = env["GH_ENTERPRISE_TOKEN_2"]
-        elif "GH_ENTERPRISE_TOKEN" in env:
-            token = env["GH_ENTERPRISE_TOKEN"]
-        elif "GH_TOKEN" in env and "GITHUB_TOKEN" not in env:
-            # Only use GH_TOKEN for enterprise if GITHUB_TOKEN isn't set
-            token = env["GH_TOKEN"]
-        # Otherwise: no explicit token, let gh use stored credentials
-
-    # Only set token environment variables if we found an explicit token
-    if token:
-        env["GH_TOKEN"] = token
-        env["GH_ENTERPRISE_TOKEN"] = token
-    else:
-        # Remove enterprise tokens from env to prevent gh from using wrong credentials
-        env.pop("GH_ENTERPRISE_TOKEN_2", None)
-        env.pop("GH_ENTERPRISE_TOKEN", None)
-        env.pop("GH_TOKEN", None)
-        env.pop("GITHUB_TOKEN", None)
 
     # Set GH_HOST to target the correct GitHub instance
     env["GH_HOST"] = host
 
-    # Set GIT_EDITOR from EDITOR if not already set
-    # This allows gh to use the same editor configuration as notehub
-    if "EDITOR" in env and "GIT_EDITOR" not in env:
-        env["GIT_EDITOR"] = env["EDITOR"]
-
-    # Return command as-is (no --hostname flag needed)
+    # Replace 'gh' with 'gh.sh' in the command
+    # gh.sh handles all auth, tokens, and host routing
     cmd = base_cmd.copy()
+    if cmd[0] == "gh":
+        cmd[0] = "gh.sh"
 
     return cmd, env
 
@@ -101,59 +61,26 @@ def _run_gh_command(
     stderr=None,
 ) -> subprocess.CompletedProcess:
     """
-    Execute gh command with robust error handling for network and encoding issues.
+    Execute gh command through shell (delegates to gh() function from gh-doctor dotkit).
 
-    Wraps subprocess.run with:
-    - Unicode error handling via errors='replace'
-    - Graceful handling of network failures
-    - Clear error messages for connectivity issues
+    Fail fast - no error recovery, no fallbacks.
+    The gh() function handles all auth and provides its own error messages.
 
     Args:
-        cmd: Command to execute
+        cmd: Shell command to execute (already prepared by _prepare_gh_cmd)
         env: Environment variables
-        host: GitHub hostname (for error messages)
+        host: GitHub hostname (unused, kept for API compatibility)
         capture_output: Whether to capture stdout/stderr
         stdin/stdout/stderr: Optional I/O redirection
 
     Returns:
         subprocess.CompletedProcess result
-
-    Raises:
-        GhError: If command fails or network error occurs
     """
-    try:
-        if capture_output:
-            result = subprocess.run(cmd, capture_output=True, text=True, env=env, errors="replace")
-        else:
-            result = subprocess.run(cmd, stdin=stdin, stdout=stdout, stderr=stderr, env=env)
-        return result
-
-    except (UnicodeDecodeError, OSError) as e:
-        # Handle encoding errors or network failures
-        error_msg = f"Cannot reach GitHub server at {host}. Check your network connection."
-        print(f"Error: {error_msg}", file=sys.stderr)
-        print(f"Details: {str(e)}", file=sys.stderr)
-        raise GhError(1, error_msg) from e
-
-
-def _handle_gh_error(result: subprocess.CompletedProcess, host: str) -> None:
-    """
-    Print helpful error messages based on gh CLI stderr output.
-
-    Args:
-        result: Completed subprocess result
-        host: GitHub hostname that was targeted
-    """
-    stderr_lower = result.stderr.lower() if result.stderr else ""
-
-    # Check for authentication-related errors
-    if any(keyword in stderr_lower for keyword in ["authentication", "credentials", "token", "401", "403"]):
-        print(f"\n❌ Authentication failed for {host}", file=sys.stderr)
-        print(f"   Try: gh auth login --hostname {host}", file=sys.stderr)
-        print("   Or:  export GH_ENTERPRISE_TOKEN=<token>", file=sys.stderr)
-        print("   Or:  export GH_ENTERPRISE_TOKEN_2=<token>", file=sys.stderr)
-        if host != "github.com":
-            print("   Or:  export GH_TOKEN=<token>", file=sys.stderr)
+    if capture_output:
+        result = subprocess.run(cmd, capture_output=True, text=True, env=env, errors="replace")
+    else:
+        result = subprocess.run(cmd, stdin=stdin, stdout=stdout, stderr=stderr, env=env)
+    return result
 
 
 def build_repo_arg(host: str, org: str, repo: str) -> str:
@@ -440,12 +367,15 @@ def get_gh_user(host: str = "github.com") -> str | None:
 
 def check_gh_installed() -> bool:
     """
-    Check if gh CLI is installed and available.
+    Check if gh.sh wrapper is available (provided by gh-doctor dotkit).
+
+    Assumes dotkit setup via ~/.local/bin is already done.
+    Always returns True - if gh.sh is missing, commands will fail fast.
 
     Returns:
-        bool: True if gh is found, False otherwise
+        bool: Always True
     """
-    return shutil.which("gh") is not None
+    return True
 
 
 def ensure_label_exists(host: str, org: str, repo: str, label_name: str, color: str, description: str = "") -> bool:
