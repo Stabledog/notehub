@@ -28,7 +28,9 @@ Notehub is a command-line tool for managing notes as GitHub issues.
 **Prerequisites:**
 - Python 3.8+
 - Git
-- GitHub CLI (`gh`) - [Installation](https://cli.github.com/)
+- **gh-help and gh-doctor dotkits** (required for GitHub CLI integration)
+  - These handle GitHub authentication and connectivity
+  - Install via your dotkit manager before using notehub
 
 **Install Notehub:**
 ```bash
@@ -42,36 +44,32 @@ notehub status
 
 ### Authentication
 
-Notehub uses the GitHub CLI (`gh`) for all GitHub API operations. You must authenticate with `gh` before using notehub.
+Notehub delegates all GitHub authentication to the **gh-doctor dotkit**, which manages GitHub CLI connectivity automatically.
 
-**For public GitHub:**
-```bash
-gh auth login
-```
-
-**For GitHub Enterprise:**
-```bash
-gh auth login --hostname <your-enterprise-github-hostname>
-```
-
-**Token Environment Variables:**
-Notehub checks these environment variables in a host-aware order:
-
-**For github.com:**
-1. `GITHUB_TOKEN` (recommended for public GitHub)
-2. `GH_TOKEN`
-3. `GH_ENTERPRISE_TOKEN_2` (fallback)
-4. `GH_ENTERPRISE_TOKEN` (fallback)
-
-**For GitHub Enterprise hosts:**
-1. `GH_ENTERPRISE_TOKEN_2` (recommended for enterprise)
-2. `GH_ENTERPRISE_TOKEN`
-3. `GH_TOKEN` (fallback)
+**Setup:**
+1. Install the `gh-help` and `gh-doctor` dotkits
+2. Run `gh-doctor.sh` to verify your GitHub authentication
+3. That's it! Notehub will use the configured auth automatically
 
 **Verify authentication:**
 ```bash
 notehub status
 ```
+
+**Troubleshooting authentication:**
+```bash
+# Run gh-doctor to diagnose and fix auth issues
+gh-doctor.sh
+
+# For detailed diagnostics
+gh-doctor.sh --verbose
+```
+
+The gh-doctor dotkit handles all authentication complexity including:
+- Token management and fallback chains
+- OAuth vs token authentication
+- Enterprise vs public GitHub routing
+- Credential storage and refresh
 
 ### Store Context Resolution
 
@@ -182,11 +180,24 @@ The `--wait` flag is important - it tells VS Code to block until the file is clo
 
 ### Troubleshooting
 
-#### "gh: command not found"
-Install the GitHub CLI: https://cli.github.com/
+#### "Error: Not authenticated" or GitHub connectivity issues
+Run gh-doctor to diagnose and fix authentication:
+```bash
+# Quick check
+gh-doctor.sh quick
 
-#### "Error: Not authenticated"
-Run `gh auth login` and follow the prompts. Verify with `gh auth status`.
+# Full diagnostic
+gh-doctor.sh
+
+# Verbose output for debugging
+gh-doctor.sh --verbose
+```
+
+The gh-doctor tool will identify and help resolve:
+- Missing or expired credentials
+- Token vs OAuth authentication issues
+- Enterprise vs public GitHub routing problems
+- SSH vs HTTPS connectivity
 
 #### "Error: Could not determine store context"
 Set your defaults:
@@ -196,12 +207,10 @@ git config --global notehub.repo notehub.default
 ```
 
 #### "Error: Repository not found"
-1. Verify the repository exists: `gh repo view <org>/<repo>`
-2. Check you have access to it
-3. Create it if needed:
-   ```bash
-   gh repo create <org>/<repo> --private
-   ```
+1. Check what context notehub is using: `notehub status`
+2. Verify the repository exists on GitHub
+3. Check you have access to it
+4. Create it if needed (via GitHub web interface or gh CLI)
 
 #### Context resolution not working as expected
 Check what context is being used:
@@ -216,12 +225,6 @@ Make sure `EDITOR` includes `--wait` flag for GUI editors:
 [System.Environment]::SetEnvironmentVariable('EDITOR','code --wait','User')
 ```
 Then restart your terminal.
-
-#### Authentication tokens on Windows
-If using environment variables for authentication, set them at User level:
-```powershell
-[System.Environment]::SetEnvironmentVariable('GITHUB_TOKEN','<your-token>','User')
-```
 
 ---
 
@@ -477,7 +480,9 @@ This command is for synchronizing local cache state with GitHub. In typical usag
 
 - **Repository**: https://github.com/Stabledog/notehub
 - **Issues & Bug Reports**: https://github.com/Stabledog/notehub/issues
-- **GitHub CLI Docs**: https://cli.github.com/manual/
+- **Dependencies**:
+  - gh-help dotkit (provides GitHub CLI setup)
+  - gh-doctor dotkit (provides authentication management)
 
 ## Tips & Best Practices
 
@@ -487,3 +492,4 @@ This command is for synchronizing local cache state with GitHub. In typical usag
 4. **Separate repos** - consider separate repos for different projects/contexts
 5. **Check status first** - run `notehub status` when troubleshooting context issues
 6. **Editor setup** - configure `$EDITOR` once, works for add and edit commands
+7. **Authentication issues** - run `gh-doctor.sh` to diagnose and fix GitHub connectivity problems
