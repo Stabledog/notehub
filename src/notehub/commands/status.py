@@ -74,13 +74,6 @@ def run(args: Namespace) -> int:
 
     print()
 
-    # Check if gh is installed
-    if not check_gh_installed():
-        print("GitHub CLI:")
-        print("  Status: ✗ gh CLI not found")
-        print("  Info:   Install from https://cli.github.com/")
-        return 0
-
     # Display Authentication Status
     print("Authentication:")
 
@@ -101,14 +94,8 @@ def run(args: Namespace) -> int:
     else:
         print(f"  Status: ✗ Not authenticated to {context.host}")
         print()
-        print("  Setup options:")
-        print(f"    1. gh auth login --hostname {context.host}")
-        if context.host == "github.com":
-            print("    2. export GITHUB_TOKEN=<token>")
-            print("    3. export GH_TOKEN=<token>")
-        else:
-            print("    2. export GH_ENTERPRISE_TOKEN=<token>")
-            print("    3. export GH_ENTERPRISE_TOKEN_2=<token>")
+        print("  Setup:")
+        print("    Run: gh-doctor.sh")
 
     print()
     print(f"For help: {HELP_URL}")
