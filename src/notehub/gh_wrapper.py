@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -21,6 +22,28 @@ class GhResult:
     returncode: int
     stdout: str
     stderr: str
+
+
+def _find_git_bash() -> str:
+    """Find Git Bash's bash.exe on Windows, avoiding WSL's bash."""
+    # Check well-known Git for Windows locations first
+    for candidate in [
+        os.path.join(os.environ.get("PROGRAMFILES", r"C:\Program Files"), "Git", "usr", "bin", "bash.exe"),
+        os.path.join(os.environ.get("PROGRAMFILES", r"C:\Program Files"), "Git", "bin", "bash.exe"),
+        os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "Git", "usr", "bin", "bash.exe"),
+    ]:
+        if os.path.isfile(candidate):
+            return candidate
+
+    # Fall back to PATH, but reject WSL bash (System32, WindowsApps)
+    wsl_dirs = ("system32", "windowsapps")
+    found = shutil.which("bash")
+    if found and not any(d in found.lower() for d in wsl_dirs):
+        return found
+
+    raise FileNotFoundError(
+        "Could not find Git Bash. Install Git for Windows or ensure its bin/ is on PATH."
+    )
 
 
 def _prepare_gh_cmd(host: str, base_cmd: list[str]) -> tuple[list[str], dict]:
@@ -80,6 +103,10 @@ def _run_gh_command(
     Returns:
         subprocess.CompletedProcess result
     """
+    # On Windows, .sh scripts can't be executed directly — invoke via Git Bash
+    if sys.platform == "win32" and cmd[0].endswith(".sh"):
+        cmd = [_find_git_bash()] + cmd
+
     if capture_output:
         result = subprocess.run(cmd, capture_output=True, text=True, env=env, errors="replace")
     else:
